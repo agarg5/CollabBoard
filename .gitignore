@@ -3,18 +3,24 @@ node_modules/
 
 # Build
 dist/
+dist-ssr/
 build/
 
 # Environment
 .env
 .env.local
 .env.production
+.env*.local
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 
 # OS
 .DS_Store
@@ -32,5 +38,6 @@ supabase/.temp/
 # Logs
 *.log
 npm-debug.log*
-.vercel
-.env*.local
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
