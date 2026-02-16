@@ -11,32 +11,37 @@ function App() {
     return unsubscribe
   }, [initialize])
 
-  if (loading) {
+  if (loading) return renderLoading()
+  if (!user) return <LoginPage />
+  return renderBoard()
+
+  function renderLoading() {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100vw', height: '100vh' }}>
-        <p>Loading...</p>
+      <div className="flex items-center justify-center w-screen h-screen">
+        <p className="text-gray-500">Loading...</p>
       </div>
     )
   }
 
-  if (!user) {
-    return <LoginPage />
-  }
-
-  return (
-    <div style={{ width: '100vw', height: '100vh' }}>
-      <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0, fontSize: '20px' }}>CollabBoard</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '14px', color: '#666' }}>{user.email}</span>
-          <button onClick={signOut} style={{ padding: '8px 16px', fontSize: '14px', cursor: 'pointer' }}>
-            Sign out
-          </button>
+  function renderBoard() {
+    return (
+      <div className="w-screen h-screen">
+        <div className="flex items-center justify-between p-4">
+          <h1 className="text-xl font-semibold">CollabBoard</h1>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500">{user!.email}</span>
+            <button
+              onClick={signOut}
+              className="px-4 py-2 text-sm cursor-pointer rounded hover:bg-gray-100 transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
+        <p className="p-4">Canvas goes here</p>
       </div>
-      <p style={{ padding: '16px' }}>Canvas goes here</p>
-    </div>
-  )
+    )
+  }
 }
 
 export default App
