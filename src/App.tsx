@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useAuthStore } from './store/authStore'
 import { LoginPage } from './components/auth/LoginPage'
+import { BoardCanvas } from './components/canvas/BoardCanvas'
 import './App.css'
 
 function App() {
@@ -25,7 +26,7 @@ function App() {
 
   function renderBoard() {
     return (
-      <div className="w-screen h-screen">
+      <div className="flex flex-col w-screen h-screen">
         <div className="flex items-center justify-between p-4">
           <h1 className="text-xl font-semibold">CollabBoard</h1>
           <div className="flex items-center gap-3">
@@ -38,7 +39,7 @@ function App() {
             </button>
           </div>
         </div>
-        <p className="p-4">Canvas goes here</p>
+        <BoardCanvas />
       </div>
     )
   }
