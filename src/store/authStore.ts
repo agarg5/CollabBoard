@@ -2,6 +2,19 @@ import { create } from 'zustand'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 
+const DEV_BYPASS_AUTH =
+  import.meta.env.DEV && import.meta.env.VITE_DEV_BYPASS_AUTH === 'true'
+
+const DEV_USER = {
+  id: 'dev-user-000',
+  email: 'dev@collabboard.local',
+  aud: 'authenticated',
+  role: 'authenticated',
+  app_metadata: {},
+  user_metadata: { full_name: 'Dev User' },
+  created_at: new Date().toISOString(),
+} as unknown as User
+
 interface AuthState {
   user: User | null
   session: Session | null
@@ -31,6 +44,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   initialize: () => {
+    if (DEV_BYPASS_AUTH) {
+      set({ user: DEV_USER, session: null, loading: false })
+      return () => {}
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       set({ session, user: session?.user ?? null, loading: false })
     })
