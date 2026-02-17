@@ -13,14 +13,39 @@ import { insertObject, deleteObject } from '../../lib/boardSync'
 import type { BoardObject, ObjectType } from '../../types/board'
 
 const CREATION_TOOLS: Set<string> = new Set(['sticky_note', 'rectangle', 'circle', 'text'])
+const SELECTION_THRESHOLD = 5
 
 interface BoardCanvasProps {
   broadcastCursor: (worldX: number, worldY: number) => void
 }
 
+export interface SelectionRect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
+  const [isSpaceHeld, setIsSpaceHeld] = useState(false)
+  // selectionRect is state because it drives rendering of the visual rect.
+  // selectionRectRef mirrors it so handleMouseUp can read the latest value
+  // without capturing a stale closure (avoids re-creating the callback each frame).
+  // isPanningRef/isSelectingRef are refs because they only gate logic in
+  // event handlers and don't need to trigger re-renders.
+  const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null)
+  const selectionRectRef = useRef<SelectionRect | null>(null)
+
+  const isPanningRef = useRef(false)
+  const panStartRef = useRef({ x: 0, y: 0 })
+  const panStartStageRef = useRef({ x: 0, y: 0 })
+  const isSelectingRef = useRef(false)
+  const selectionStartRef = useRef({ x: 0, y: 0 })
+  // Tracks whether the current mousedown initiated a pan or selection drag,
+  // so the subsequent click event can be suppressed without setTimeout.
+  const interactionStartedRef = useRef(false)
 
   const tool = useUiStore((s) => s.tool)
   const setTool = useUiStore((s) => s.setTool)
@@ -31,22 +56,68 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
   const addObject = useBoardStore((s) => s.addObject)
   const setSelectedIds = useBoardStore((s) => s.setSelectedIds)
   const deleteSelectedObjects = useBoardStore((s) => s.deleteSelectedObjects)
+  const selectAll = useBoardStore((s) => s.selectAll)
 
+  function updateSelectionRect(rect: SelectionRect | null) {
+    selectionRectRef.current = rect
+    setSelectionRect(rect)
+  }
+
+  // Keyboard: delete, spacebar, Ctrl/Cmd+A
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key !== 'Delete' && e.key !== 'Backspace') return
-      const { selectedIds } = useBoardStore.getState()
-      if (selectedIds.length === 0) return
-      if (useUiStore.getState().editingId !== null) return
+      const editing = useUiStore.getState().editingId !== null
 
-      e.preventDefault()
-      const deletedIds = deleteSelectedObjects()
-      deletedIds.forEach((id) => deleteObject(id))
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (editing) return
+        const { selectedIds } = useBoardStore.getState()
+        if (selectedIds.length === 0) return
+        e.preventDefault()
+        const deletedIds = deleteSelectedObjects()
+        deletedIds.forEach((id) => deleteObject(id))
+        return
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+        if (editing) return
+        e.preventDefault()
+        selectAll()
+        return
+      }
+
+      if (e.key === ' ' && !e.repeat) {
+        if (editing) return
+        e.preventDefault()
+        setIsSpaceHeld(true)
+      }
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [deleteSelectedObjects])
 
+    function handleKeyUp(e: KeyboardEvent) {
+      if (e.key === ' ') {
+        setIsSpaceHeld(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
+  }, [deleteSelectedObjects, selectAll])
+
+  // Prevent middle-click autoscroll on the container
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    function preventMiddleClick(e: MouseEvent) {
+      if (e.button === 1) e.preventDefault()
+    }
+    container.addEventListener('mousedown', preventMiddleClick)
+    return () => container.removeEventListener('mousedown', preventMiddleClick)
+  }, [])
+
+  // Resize observer
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
@@ -81,41 +152,152 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
     [stageScale, stagePosition, setStageScale, setStagePosition],
   )
 
-  const handleDragMove = useCallback(
-    (e: Konva.KonvaEventObject<DragEvent>) => {
-      const stage = e.target
-      if (stage !== e.target.getStage()) return
-      setStagePosition({ x: stage.x(), y: stage.y() })
+  function isClickOnEmpty(e: Konva.KonvaEventObject<MouseEvent>) {
+    const stage = e.target.getStage()
+    const target = e.target
+    return target === stage || (target.getParent() === stage && target.nodeType === 'Layer')
+  }
+
+  const handleMouseDown = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      const stage = e.target.getStage()
+      if (!stage) return
+
+      const currentTool = useUiStore.getState().tool
+      const spaceHeld = isSpaceHeld
+
+      // Determine if we should pan
+      const evt = e.evt
+      const shouldPanNow =
+        evt.button === 1 ||
+        (spaceHeld && evt.button === 0) ||
+        (currentTool === 'hand' && evt.button === 0)
+
+      if (shouldPanNow) {
+        evt.preventDefault()
+        isPanningRef.current = true
+        interactionStartedRef.current = true
+        panStartRef.current = { x: evt.clientX, y: evt.clientY }
+        const { stagePosition: pos } = useUiStore.getState()
+        panStartStageRef.current = { x: pos.x, y: pos.y }
+        return
+      }
+
+      if (evt.button !== 0) return
+
+      // Selection rect — only on empty canvas with select tool
+      if (currentTool === 'select' && isClickOnEmpty(e)) {
+        const pointer = stage.getPointerPosition()
+        if (!pointer) return
+        const { stagePosition: pos, stageScale: scale } = useUiStore.getState()
+        const worldX = (pointer.x - pos.x) / scale
+        const worldY = (pointer.y - pos.y) / scale
+        isSelectingRef.current = true
+        interactionStartedRef.current = true
+        selectionStartRef.current = { x: worldX, y: worldY }
+        updateSelectionRect({ x: worldX, y: worldY, width: 0, height: 0 })
+      }
     },
-    [setStagePosition],
+    [isSpaceHeld],
   )
 
   const handleMouseMove = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
       const stage = e.target.getStage()
       if (!stage) return
+
       const pointer = stage.getPointerPosition()
       if (!pointer) return
+
       const { stagePosition: pos, stageScale: scale } = useUiStore.getState()
       const worldX = (pointer.x - pos.x) / scale
       const worldY = (pointer.y - pos.y) / scale
       broadcastCursor(worldX, worldY)
+
+      if (isPanningRef.current) {
+        const dx = e.evt.clientX - panStartRef.current.x
+        const dy = e.evt.clientY - panStartRef.current.y
+        useUiStore.getState().setStagePosition({
+          x: panStartStageRef.current.x + dx,
+          y: panStartStageRef.current.y + dy,
+        })
+        return
+      }
+
+      if (isSelectingRef.current) {
+        const startX = selectionStartRef.current.x
+        const startY = selectionStartRef.current.y
+        updateSelectionRect({
+          x: Math.min(startX, worldX),
+          y: Math.min(startY, worldY),
+          width: Math.abs(worldX - startX),
+          height: Math.abs(worldY - startY),
+        })
+      }
     },
     [broadcastCursor],
   )
 
+  const handleMouseUp = useCallback(
+    (_e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (isPanningRef.current) {
+        isPanningRef.current = false
+        // interactionStartedRef stays true until click fires
+        return
+      }
+
+      if (isSelectingRef.current) {
+        isSelectingRef.current = false
+        // Read from ref to avoid stale closure — selectionRect state updates
+        // every frame during drag, so capturing it in useCallback deps would
+        // re-create this handler on every mouse move.
+        const rect = selectionRectRef.current
+        updateSelectionRect(null)
+
+        if (!rect || (rect.width < SELECTION_THRESHOLD && rect.height < SELECTION_THRESHOLD)) {
+          // Too small — treat as a click, let handleStageClick handle deselect
+          interactionStartedRef.current = false
+          return
+        }
+
+        // AABB intersection test
+        const objects = useBoardStore.getState().objects
+        const hits = objects.filter((obj) => {
+          return (
+            obj.x < rect.x + rect.width &&
+            obj.x + obj.width > rect.x &&
+            obj.y < rect.y + rect.height &&
+            obj.y + obj.height > rect.y
+          )
+        })
+        useBoardStore.getState().setSelectedIds(hits.map((o) => o.id))
+        // interactionStartedRef stays true until click fires
+      }
+    },
+    [],
+  )
+
   function handleStageClick(e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
+    // Skip if this click is the tail end of a pan or selection drag
+    if (interactionStartedRef.current) {
+      interactionStartedRef.current = false
+      return
+    }
+
     const stage = e.target.getStage()
     const target = e.target
     const clickedOnEmpty =
       target === stage || (target.getParent() === stage && target.nodeType === 'Layer')
 
+    if (tool === 'hand') return
+
     if (CREATION_TOOLS.has(tool) && stage && (tool === 'text' || clickedOnEmpty)) {
       const pointer = stage.getPointerPosition()
       if (!pointer) return
 
-      const worldX = (pointer.x - stagePosition.x) / stageScale
-      const worldY = (pointer.y - stagePosition.y) / stageScale
+      const { stagePosition: pos, stageScale: scale } = useUiStore.getState()
+      const worldX = (pointer.x - pos.x) / scale
+      const worldY = (pointer.y - pos.y) / scale
 
       let width = 200
       let height = 200
@@ -167,8 +349,14 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
     }
   }
 
+  function getCursorClass(): string {
+    if (tool === 'hand' || isSpaceHeld) return 'cursor-grab'
+    if (CREATION_TOOLS.has(tool)) return 'cursor-crosshair'
+    return 'cursor-default'
+  }
+
   return (
-    <div ref={containerRef} className="relative flex-1 overflow-hidden bg-white">
+    <div ref={containerRef} className={`relative flex-1 overflow-hidden bg-white ${getCursorClass()}`}>
       {dimensions.width > 0 && (
         <Stage
           width={dimensions.width}
@@ -177,12 +365,12 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
           y={stagePosition.y}
           scaleX={stageScale}
           scaleY={stageScale}
-          draggable={tool === 'select'}
           onWheel={handleWheel}
-          onDragMove={handleDragMove}
           onClick={handleStageClick}
           onTap={handleStageClick}
+          onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
         >
           <BackgroundGrid
             stageWidth={dimensions.width}
@@ -191,7 +379,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
             stageY={stagePosition.y}
             scale={stageScale}
           />
-          <ObjectLayer />
+          <ObjectLayer selectionRect={selectionRect} />
           <CursorLayer />
         </Stage>
       )}

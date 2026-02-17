@@ -1,6 +1,7 @@
 import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
 import { patchObject, deleteObject } from '../../lib/boardSync'
+import type { BoardObject } from '../../types/board'
 
 const STICKY_COLORS = [
   { name: 'Yellow', value: '#fef08a' },
@@ -18,34 +19,59 @@ const SHAPE_COLORS = [
   { name: 'Gray', value: '#6b7280' },
 ]
 
+const SHAPE_TYPES = new Set(['rectangle', 'circle'])
+
+function getMultiSelectColorInfo(selectedIds: string[], objects: BoardObject[]) {
+  if (selectedIds.length === 0) return null
+
+  const selectedObjs = objects.filter((o) => selectedIds.includes(o.id))
+  if (selectedObjs.length === 0) return null
+
+  const types = new Set(selectedObjs.map((o) => o.type))
+
+  // All sticky notes
+  if (types.size === 1 && types.has('sticky_note')) {
+    return { palette: STICKY_COLORS, colorKey: 'color' as const, isShape: false }
+  }
+
+  // All shapes (rectangle/circle)
+  if ([...types].every((t) => SHAPE_TYPES.has(t))) {
+    return { palette: SHAPE_COLORS, colorKey: 'fillColor' as const, isShape: true }
+  }
+
+  return null
+}
+
 export function Toolbar() {
   const tool = useUiStore((s) => s.tool)
   const setTool = useUiStore((s) => s.setTool)
   const selectedIds = useBoardStore((s) => s.selectedIds)
-  const selectedObj = useBoardStore((s) =>
-    s.selectedIds.length === 1 ? s.objects.find((o) => o.id === s.selectedIds[0]) : null,
-  )
+  const objects = useBoardStore((s) => s.objects)
   const updateObject = useBoardStore((s) => s.updateObject)
   const deleteSelectedObjects = useBoardStore((s) => s.deleteSelectedObjects)
 
-  const isShape = selectedObj?.type === 'rectangle' || selectedObj?.type === 'circle'
-  const showStickyColors = selectedObj?.type === 'sticky_note'
-  const showShapeColors = isShape
+  const colorInfo = getMultiSelectColorInfo(selectedIds, objects)
 
   function handleColorChange(color: string) {
-    if (!selectedObj) return
+    if (!colorInfo) return
     const updated_at = new Date().toISOString()
-    const properties = isShape
-      ? { ...selectedObj.properties, fillColor: color }
-      : { ...selectedObj.properties, color }
-    updateObject(selectedObj.id, { properties, updated_at })
-    patchObject(selectedObj.id, { properties, updated_at })
+    const selectedObjs = objects.filter((o) => selectedIds.includes(o.id))
+    for (const obj of selectedObjs) {
+      const properties = colorInfo.isShape
+        ? { ...obj.properties, fillColor: color }
+        : { ...obj.properties, color }
+      updateObject(obj.id, { properties, updated_at })
+      patchObject(obj.id, { properties, updated_at })
+    }
   }
 
-  const colors = showStickyColors ? STICKY_COLORS : showShapeColors ? SHAPE_COLORS : null
-  const activeColor = isShape
-    ? (selectedObj?.properties.fillColor as string)
-    : (selectedObj?.properties.color as string)
+  // Determine the "active" color — show as active if all share the same color
+  const activeColor = (() => {
+    if (!colorInfo) return undefined
+    const selectedObjs = objects.filter((o) => selectedIds.includes(o.id))
+    const colors = selectedObjs.map((o) => o.properties[colorInfo.colorKey] as string)
+    return colors.every((c) => c === colors[0]) ? colors[0] : undefined
+  })()
 
   return (
     <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-200">
@@ -70,6 +96,29 @@ export function Toolbar() {
           />
         </svg>
         Select
+      </button>
+      <button
+        onClick={() => setTool('hand')}
+        className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
+          tool === 'hand' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+        }`}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          className="inline-block mr-1 -mt-0.5"
+        >
+          <path
+            d="M8 1.5v7M5.5 3.5v5.5M3.5 5.5v4a4.5 4.5 0 009 0V4.5M10.5 3v6M12.5 5v4.5"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        Hand
       </button>
       <button
         onClick={() => setTool('sticky_note')}
@@ -199,10 +248,10 @@ export function Toolbar() {
         </>
       )}
 
-      {colors && (
+      {colorInfo && (
         <>
           <div className="w-px h-6 bg-gray-300 mx-1" />
-          {colors.map((c) => (
+          {colorInfo.palette.map((c) => (
             <button
               key={c.value}
               title={c.name}
