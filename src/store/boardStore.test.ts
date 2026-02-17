@@ -156,6 +156,14 @@ describe('boardStore', () => {
       expect(result).toHaveLength(0)
     })
 
+    it('pasteClipboard returns empty when boardId is null', () => {
+      const obj = makeObject({ id: 'a' })
+      useBoardStore.setState({ boardId: null, clipboard: [obj], objects: [obj] })
+      const result = useBoardStore.getState().pasteClipboard(null)
+      expect(result).toHaveLength(0)
+      expect(useBoardStore.getState().objects).toHaveLength(1)
+    })
+
     it('duplicateSelected clones selected objects with offset', () => {
       const a = makeObject({ id: 'a', x: 50, y: 80, z_index: 3 })
       const b = makeObject({ id: 'b', x: 200, y: 300, z_index: 4, type: 'rectangle' })

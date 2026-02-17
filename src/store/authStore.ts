@@ -27,6 +27,12 @@ interface AuthState {
   initialize: () => () => void
 }
 
+/** Returns the current user's ID if it's a valid UUID, otherwise null. */
+export function getValidUserId(): string | null {
+  const rawId = useAuthStore.getState().user?.id
+  return rawId && /^[0-9a-f-]{36}$/i.test(rawId) ? rawId : null
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   session: null,

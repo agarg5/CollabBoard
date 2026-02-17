@@ -1,6 +1,6 @@
 import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
-import { useAuthStore } from '../../store/authStore'
+import { getValidUserId } from '../../store/authStore'
 import { patchObject, deleteObject, insertObject } from '../../lib/boardSync'
 import type { BoardObject } from '../../types/board'
 
@@ -55,22 +55,13 @@ export function Toolbar() {
   const duplicateSelected = useBoardStore((s) => s.duplicateSelected)
   const clipboardLength = useBoardStore((s) => s.clipboard.length)
 
-  function getUserId() {
-    const rawId = useAuthStore.getState().user?.id
-    return rawId && /^[0-9a-f-]{36}$/i.test(rawId) ? rawId : null
-  }
-
   function handleDuplicate() {
-    const newObjects = duplicateSelected(getUserId())
+    const newObjects = duplicateSelected(getValidUserId())
     newObjects.forEach((obj) => insertObject(obj))
   }
 
-  function handleCopy() {
-    copySelected()
-  }
-
   function handlePaste() {
-    const newObjects = pasteClipboard(getUserId())
+    const newObjects = pasteClipboard(getValidUserId())
     newObjects.forEach((obj) => insertObject(obj))
   }
 
@@ -287,7 +278,7 @@ export function Toolbar() {
           </button>
           <button
             title="Copy (Ctrl+C)"
-            onClick={handleCopy}
+            onClick={copySelected}
             className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-gray-100"
           >
             <svg
@@ -301,24 +292,28 @@ export function Toolbar() {
               <path d="M11 3V2a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h1" stroke="currentColor" strokeWidth="1.5" />
             </svg>
           </button>
-          {clipboardLength > 0 && (
-            <button
-              title="Paste (Ctrl+V)"
-              onClick={handlePaste}
-              className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-gray-100"
+        </>
+      )}
+
+      {clipboardLength > 0 && (
+        <>
+          <div className="w-px h-6 bg-gray-300 mx-1" />
+          <button
+            title="Paste (Ctrl+V)"
+            onClick={handlePaste}
+            className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-gray-100"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              className="inline-block -mt-0.5"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                className="inline-block -mt-0.5"
-              >
-                <rect x="3" y="4" width="10" height="11" rx="1" stroke="currentColor" strokeWidth="1.5" />
-                <path d="M6 4V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1" stroke="currentColor" strokeWidth="1.5" />
-              </svg>
-            </button>
-          )}
+              <rect x="3" y="4" width="10" height="11" rx="1" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M6 4V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+          </button>
         </>
       )}
 
