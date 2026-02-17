@@ -51,11 +51,23 @@ export function useAI() {
 
       const data = (await res.json()) as AIResponse
 
+      const errors: string[] = []
       for (const toolCall of data.toolCalls) {
-        await executeToolCall(toolCall, {
-          boardId,
-          userId: session.user.id,
-        })
+        try {
+          const result = await executeToolCall(toolCall, {
+            boardId,
+            userId: session.user.id,
+          })
+          if (result.result && typeof result.result === 'object' && 'error' in result.result) {
+            errors.push(`${toolCall.function.name}: ${(result.result as { error: string }).error}`)
+          }
+        } catch (err) {
+          errors.push(`${toolCall.function.name}: ${err instanceof Error ? err.message : 'execution failed'}`)
+        }
+      }
+
+      if (errors.length > 0) {
+        setError(`Some actions failed: ${errors.join('; ')}`)
       }
 
       return data.message

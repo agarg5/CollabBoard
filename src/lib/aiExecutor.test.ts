@@ -215,6 +215,15 @@ describe('aiExecutor', () => {
       expect(obj.properties.fillColor).toBe('#ff0000')
       expect(obj.properties.strokeColor).toBe('#1e293b') // preserved
     })
+
+    it('returns error for unsupported types like frame', async () => {
+      useBoardStore.getState().addObject(
+        makeObject({ id: 'frame-1', type: 'frame', properties: { label: 'My Frame' } }),
+      )
+      const tc = makeToolCall('changeColor', { objectId: 'frame-1', color: '#ff0000' })
+      const result = await executeToolCall(tc, ctx)
+      expect((result.result as { error: string }).error).toBe('changeColor is not supported for type: frame')
+    })
   })
 
   describe('deleteObject', () => {

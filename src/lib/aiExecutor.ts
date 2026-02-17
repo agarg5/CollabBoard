@@ -165,7 +165,14 @@ const toolHandlers: Record<string, ToolHandler> = {
     const obj = useBoardStore.getState().objects.find((o) => o.id === id)
     if (!obj) return { error: 'Object not found' }
     const color = args.color as string
-    const colorKey = obj.type === 'rectangle' || obj.type === 'circle' ? 'fillColor' : 'color'
+    const colorKeyMap: Record<string, string> = {
+      rectangle: 'fillColor',
+      circle: 'fillColor',
+      sticky_note: 'color',
+      connector: 'color',
+    }
+    const colorKey = colorKeyMap[obj.type]
+    if (!colorKey) return { error: `changeColor is not supported for type: ${obj.type}` }
     const changes: Partial<BoardObject> = {
       properties: { ...obj.properties, [colorKey]: color },
       updated_at: new Date().toISOString(),
