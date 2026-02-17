@@ -71,28 +71,42 @@ export function BoardCanvas() {
     const clickedOnEmpty =
       target === stage || (target.getParent() === stage && target.nodeType === 'Layer')
 
-    if (tool === 'sticky_note' && clickedOnEmpty && stage) {
+    if ((tool === 'sticky_note' || tool === 'rectangle' || tool === 'circle') && clickedOnEmpty && stage) {
       const pointer = stage.getPointerPosition()
       if (!pointer) return
 
       const worldX = (pointer.x - stagePosition.x) / stageScale
       const worldY = (pointer.y - stagePosition.y) / stageScale
 
-      const newNote: BoardObject = {
+      let width = 200
+      let height = 200
+      let properties: Record<string, unknown> = { text: '', color: '#fef08a' }
+
+      if (tool === 'rectangle') {
+        width = 150
+        height = 100
+        properties = { fillColor: '#3b82f6', strokeColor: '#1e293b', strokeWidth: 2 }
+      } else if (tool === 'circle') {
+        width = 120
+        height = 120
+        properties = { fillColor: '#ec4899', strokeColor: '#1e293b', strokeWidth: 2 }
+      }
+
+      const newObj: BoardObject = {
         id: crypto.randomUUID(),
         board_id: '',
-        type: 'sticky_note',
-        properties: { text: '', color: '#fef08a' },
-        x: worldX - 100,
-        y: worldY - 100,
-        width: 200,
-        height: 200,
+        type: tool,
+        properties,
+        x: worldX - width / 2,
+        y: worldY - height / 2,
+        width,
+        height,
         z_index: useBoardStore.getState().objects.reduce((max, o) => Math.max(max, o.z_index), 0) + 1,
         created_by: '',
         updated_at: new Date().toISOString(),
       }
-      addObject(newNote)
-      setSelectedIds([newNote.id])
+      addObject(newObj)
+      setSelectedIds([newObj.id])
       setTool('select')
       return
     }
