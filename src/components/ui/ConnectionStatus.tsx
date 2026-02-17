@@ -26,10 +26,12 @@ export function ConnectionStatus() {
 
   return (
     <div
+      role="status"
+      aria-live="polite"
       className={`flex items-center gap-1.5 text-sm text-gray-600 transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
     >
       <span className={`inline-block h-2 w-2 rounded-full ${color}`} />
-      {label}
+      <span className={visible ? '' : 'sr-only'}>{label}</span>
     </div>
   )
 }

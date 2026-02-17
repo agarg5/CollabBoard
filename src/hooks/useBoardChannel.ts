@@ -85,10 +85,13 @@ export function useBoardChannel(boardId: string) {
         if (status === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED) {
           if (wasSubscribed.current) {
             setStatus('reconnecting')
-            refetchBoard(boardId).then(() => setStatus('connected'))
+            refetchBoard(boardId)
+              .then(() => setStatus('connected'))
+              .catch(() => setStatus('error'))
             trackPresence(ch)
           } else {
             setStatus('connected')
+            trackPresence(ch)
           }
           wasSubscribed.current = true
         } else if (
@@ -102,7 +105,6 @@ export function useBoardChannel(boardId: string) {
       })
 
     setChannel(ch)
-    trackPresence(ch)
 
     return () => {
       setChannel(null)

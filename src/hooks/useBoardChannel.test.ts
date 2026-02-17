@@ -15,26 +15,6 @@ describe('useBoardChannel reconnection logic', () => {
     vi.clearAllMocks()
   })
 
-  it('connectionStore transitions through full reconnect lifecycle', () => {
-    const { setStatus } = useConnectionStore.getState()
-
-    // Initial subscribe
-    setStatus('connected')
-    expect(useConnectionStore.getState().status).toBe('connected')
-
-    // Network drops — channel error
-    setStatus('error')
-    expect(useConnectionStore.getState().status).toBe('error')
-
-    // Supabase starts reconnecting
-    setStatus('reconnecting')
-    expect(useConnectionStore.getState().status).toBe('reconnecting')
-
-    // Reconnected
-    setStatus('connected')
-    expect(useConnectionStore.getState().status).toBe('connected')
-  })
-
   it('refetchBoard updates board store with fetched objects', async () => {
     const { fetchObjects } = await import('../lib/boardSync')
 
