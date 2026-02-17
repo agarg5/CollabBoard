@@ -34,4 +34,13 @@ export interface CursorPosition {
   x: number
   y: number
   color: string
+  /** Local-only timestamp for staleness detection (not broadcast) */
+  _lastSeen?: number
+}
+
+export interface PresenceUser {
+  user_id: string
+  user_name: string
+  color: string
+  online_at: string
 }

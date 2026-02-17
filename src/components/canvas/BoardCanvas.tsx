@@ -6,12 +6,17 @@ import { useBoardStore } from '../../store/boardStore'
 import { useAuthStore } from '../../store/authStore'
 import { BackgroundGrid } from './BackgroundGrid'
 import { ObjectLayer } from './ObjectLayer'
+import { CursorLayer } from './CursorLayer'
 import { TextEditor } from './TextEditor'
 import { calculateZoom } from './zoomHelper'
 import { insertObject } from '../../lib/boardSync'
 import type { BoardObject } from '../../types/board'
 
-export function BoardCanvas() {
+interface BoardCanvasProps {
+  broadcastCursor: (worldX: number, worldY: number) => void
+}
+
+export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
 
@@ -65,6 +70,20 @@ export function BoardCanvas() {
       setStagePosition({ x: stage.x(), y: stage.y() })
     },
     [setStagePosition],
+  )
+
+  const handleMouseMove = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      const stage = e.target.getStage()
+      if (!stage) return
+      const pointer = stage.getPointerPosition()
+      if (!pointer) return
+      const { stagePosition: pos, stageScale: scale } = useUiStore.getState()
+      const worldX = (pointer.x - pos.x) / scale
+      const worldY = (pointer.y - pos.y) / scale
+      broadcastCursor(worldX, worldY)
+    },
+    [broadcastCursor],
   )
 
   function handleStageClick(e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
@@ -137,6 +156,7 @@ export function BoardCanvas() {
           onDragMove={handleDragMove}
           onClick={handleStageClick}
           onTap={handleStageClick}
+          onMouseMove={handleMouseMove}
         >
           <BackgroundGrid
             stageWidth={dimensions.width}
@@ -146,6 +166,7 @@ export function BoardCanvas() {
             scale={stageScale}
           />
           <ObjectLayer />
+          <CursorLayer />
         </Stage>
       )}
       <TextEditor />
