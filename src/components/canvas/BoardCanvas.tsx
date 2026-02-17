@@ -95,7 +95,8 @@ export function BoardCanvas() {
       }
 
       const { boardId, objects } = useBoardStore.getState()
-      const userId = useAuthStore.getState().user?.id ?? ''
+      const rawId = useAuthStore.getState().user?.id
+      const userId = rawId && /^[0-9a-f-]{36}$/i.test(rawId) ? rawId : null
       const newObj: BoardObject = {
         id: crypto.randomUUID(),
         board_id: boardId,

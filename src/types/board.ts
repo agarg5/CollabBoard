@@ -17,14 +17,14 @@ export interface BoardObject {
   width: number
   height: number
   z_index: number
-  created_by: string
+  created_by: string | null
   updated_at: string
 }
 
 export interface Board {
   id: string
   name: string
-  created_by: string
+  created_by: string | null
   created_at: string
 }
 
