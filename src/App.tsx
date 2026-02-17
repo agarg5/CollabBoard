@@ -8,6 +8,7 @@ import { LoginPage } from './components/auth/LoginPage'
 import { BoardCanvas } from './components/canvas/BoardCanvas'
 import { Toolbar } from './components/ui/Toolbar'
 import { PresencePanel } from './components/ui/PresencePanel'
+import { ConnectionStatus } from './components/ui/ConnectionStatus'
 import './App.css'
 
 function BoardView() {
@@ -21,7 +22,10 @@ function BoardView() {
   return (
     <div className="flex flex-col w-screen h-screen">
       <div className="flex items-center justify-between p-4">
-        <h1 className="text-xl font-semibold">CollabBoard</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-semibold">CollabBoard</h1>
+          <ConnectionStatus />
+        </div>
         <div className="flex items-center gap-3">
           <PresencePanel />
           <span className="text-sm text-gray-500">{user!.email}</span>
