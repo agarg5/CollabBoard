@@ -17,9 +17,12 @@ export function LoginPage() {
     setError(null)
     setMessage(null)
     setSubmitting(true)
-    const err = await signInWithEmail(email, password)
-    if (err) setError(err)
-    setSubmitting(false)
+    try {
+      const err = await signInWithEmail(email, password)
+      if (err) setError(err)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   async function handleSignUp(e: React.MouseEvent) {
@@ -27,13 +30,16 @@ export function LoginPage() {
     setError(null)
     setMessage(null)
     setSubmitting(true)
-    const err = await signUpWithEmail(email, password)
-    if (err) {
-      setError(err)
-    } else {
-      setMessage('Check your email to confirm your account.')
+    try {
+      const err = await signUpWithEmail(email, password)
+      if (err) {
+        setError(err)
+      } else {
+        setMessage('Check your email to confirm your account.')
+      }
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitting(false)
   }
 
   return (
