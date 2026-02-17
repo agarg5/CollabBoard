@@ -5,7 +5,7 @@ import { usePresenceStore } from '../store/presenceStore'
 import { getCursorColor } from '../lib/cursorColors'
 import type { CursorPosition } from '../types/board'
 
-const THROTTLE_MS = 50
+const THROTTLE_MS = 33
 const CURSOR_STALE_MS = 10_000
 
 /**
