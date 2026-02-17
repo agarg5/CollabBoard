@@ -3,7 +3,7 @@ import { Layer, Transformer } from 'react-konva'
 import type Konva from 'konva'
 import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
-import { StickyNote } from './StickyNote'
+import { StickyNote, MIN_WIDTH, MIN_HEIGHT } from './StickyNote'
 
 export function ObjectLayer() {
   const objects = useBoardStore((s) => s.objects)
@@ -67,11 +67,11 @@ export function ObjectLayer() {
       <Transformer
         ref={transformerRef}
         keepRatio={false}
-        boundBoxFunc={(_oldBox, newBox) => {
-          if (newBox.width < 100) newBox.width = 100
-          if (newBox.height < 60) newBox.height = 60
-          return newBox
-        }}
+        boundBoxFunc={(_oldBox, newBox) => ({
+          ...newBox,
+          width: Math.max(MIN_WIDTH, newBox.width),
+          height: Math.max(MIN_HEIGHT, newBox.height),
+        })}
         anchorSize={8}
         anchorCornerRadius={2}
         borderStroke="#3b82f6"

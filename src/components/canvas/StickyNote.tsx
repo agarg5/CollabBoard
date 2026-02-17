@@ -13,6 +13,8 @@ interface StickyNoteProps {
 
 const PADDING = 12
 const FONT_SIZE = 14
+const MIN_WIDTH = 100
+const MIN_HEIGHT = 60
 
 export function StickyNote({
   obj,
@@ -38,8 +40,8 @@ export function StickyNote({
     onTransformEnd(obj.id, {
       x: node.x(),
       y: node.y(),
-      width: Math.max(100, node.width() * scaleX),
-      height: Math.max(60, node.height() * scaleY),
+      width: Math.max(MIN_WIDTH, node.width() * scaleX),
+      height: Math.max(MIN_HEIGHT, node.height() * scaleY),
     })
   }
 
@@ -82,4 +84,4 @@ export function StickyNote({
   )
 }
 
-export { PADDING, FONT_SIZE }
+export { PADDING, FONT_SIZE, MIN_WIDTH, MIN_HEIGHT }

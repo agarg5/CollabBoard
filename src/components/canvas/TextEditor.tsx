@@ -8,11 +8,11 @@ export function TextEditor() {
   const setEditingId = useUiStore((s) => s.setEditingId)
   const stagePosition = useUiStore((s) => s.stagePosition)
   const stageScale = useUiStore((s) => s.stageScale)
-  const objects = useBoardStore((s) => s.objects)
+  const obj = useBoardStore((s) =>
+    editingId ? s.objects.find((o) => o.id === editingId) : null,
+  )
   const updateObject = useBoardStore((s) => s.updateObject)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  const obj = editingId ? objects.find((o) => o.id === editingId) : null
 
   useEffect(() => {
     if (obj && textareaRef.current) {

@@ -67,7 +67,9 @@ export function BoardCanvas() {
 
   function handleStageClick(e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
     const stage = e.target.getStage()
-    const clickedOnEmpty = e.target === stage || e.target.getParent() === stage
+    const target = e.target
+    const clickedOnEmpty =
+      target === stage || (target.getParent() === stage && target.nodeType === 'Layer')
 
     if (tool === 'sticky_note' && clickedOnEmpty && stage) {
       const pointer = stage.getPointerPosition()
