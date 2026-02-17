@@ -146,6 +146,28 @@ export function Toolbar() {
         </svg>
         Circle
       </button>
+      <button
+        onClick={() => setTool('text')}
+        className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
+          tool === 'text' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+        }`}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          className="inline-block mr-1 -mt-0.5"
+        >
+          <path
+            d="M3 3h10M8 3v10M5.5 3v1M10.5 3v1"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+        Text
+      </button>
 
       {selectedIds.length > 0 && (
         <>

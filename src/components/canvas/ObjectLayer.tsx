@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Layer, Transformer } from 'react-konva'
 import type Konva from 'konva'
 import { useBoardStore } from '../../store/boardStore'
@@ -7,11 +7,15 @@ import { patchObject } from '../../lib/boardSync'
 import { StickyNote, MIN_WIDTH as STICKY_MIN_W, MIN_HEIGHT as STICKY_MIN_H } from './StickyNote'
 import { ShapeRect, MIN_WIDTH as RECT_MIN_W, MIN_HEIGHT as RECT_MIN_H } from './ShapeRect'
 import { ShapeCircle, MIN_WIDTH as CIRCLE_MIN_W, MIN_HEIGHT as CIRCLE_MIN_H } from './ShapeCircle'
+import { TextObject, MIN_WIDTH as TEXT_MIN_W, MIN_HEIGHT as TEXT_MIN_H } from './TextObject'
 
-// All shape types currently share the same min (50). If per-type mins diverge,
-// switch to a lookup by selected object type instead of a global min.
-const MIN_WIDTH = Math.min(STICKY_MIN_W, RECT_MIN_W, CIRCLE_MIN_W)
-const MIN_HEIGHT = Math.min(STICKY_MIN_H, RECT_MIN_H, CIRCLE_MIN_H)
+const MIN_SIZES: Record<string, { width: number; height: number }> = {
+  sticky_note: { width: STICKY_MIN_W, height: STICKY_MIN_H },
+  rectangle: { width: RECT_MIN_W, height: RECT_MIN_H },
+  circle: { width: CIRCLE_MIN_W, height: CIRCLE_MIN_H },
+  text: { width: TEXT_MIN_W, height: TEXT_MIN_H },
+}
+const DEFAULT_MIN = { width: 50, height: 50 }
 
 export function ObjectLayer() {
   const objects = useBoardStore((s) => s.objects)
@@ -23,6 +27,12 @@ export function ObjectLayer() {
 
   const transformerRef = useRef<Konva.Transformer>(null)
   const layerRef = useRef<Konva.Layer>(null)
+
+  const selectedMins = useMemo(() => {
+    if (selectedIds.length !== 1) return DEFAULT_MIN
+    const type = objects.find((o) => o.id === selectedIds[0])?.type
+    return (type && MIN_SIZES[type]) || DEFAULT_MIN
+  }, [selectedIds, objects])
 
   useEffect(() => {
     const transformer = transformerRef.current
@@ -108,6 +118,21 @@ export function ObjectLayer() {
             />
           )
         }
+        if (obj.type === 'text') {
+          return (
+            <TextObject
+              key={obj.id}
+              obj={obj}
+              isSelected={isSelected}
+              isEditing={editingId === obj.id}
+              onSelect={handleSelect}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onTransformEnd={handleTransformEnd}
+              onDoubleClick={handleDoubleClick}
+            />
+          )
+        }
         return null
       })}
       <Transformer
@@ -115,8 +140,8 @@ export function ObjectLayer() {
         keepRatio={false}
         boundBoxFunc={(_oldBox, newBox) => ({
           ...newBox,
-          width: Math.max(MIN_WIDTH, newBox.width),
-          height: Math.max(MIN_HEIGHT, newBox.height),
+          width: Math.max(selectedMins.width, newBox.width),
+          height: Math.max(selectedMins.height, newBox.height),
         })}
         anchorSize={8}
         anchorCornerRadius={2}
