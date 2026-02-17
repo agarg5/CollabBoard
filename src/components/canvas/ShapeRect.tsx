@@ -5,6 +5,7 @@ import type { BoardObject } from '../../types/board'
 interface ShapeRectProps {
   obj: BoardObject
   onSelect: (id: string) => void
+  onDragStart: (e: import('konva').default.KonvaEventObject<DragEvent>) => void
   onDragEnd: (id: string, x: number, y: number) => void
   onTransformEnd: (id: string, attrs: { x: number; y: number; width: number; height: number }) => void
 }
@@ -15,6 +16,7 @@ export const MIN_HEIGHT = 50
 export function ShapeRect({
   obj,
   onSelect,
+  onDragStart,
   onDragEnd,
   onTransformEnd,
 }: ShapeRectProps) {
@@ -50,6 +52,7 @@ export function ShapeRect({
       draggable
       onClick={() => onSelect(obj.id)}
       onTap={() => onSelect(obj.id)}
+      onDragStart={onDragStart}
       onDragEnd={handleDragEnd}
       onTransformEnd={handleTransformEnd}
     >

@@ -7,6 +7,7 @@ interface StickyNoteProps {
   isSelected: boolean
   isEditing: boolean
   onSelect: (id: string) => void
+  onDragStart: (e: import('konva').default.KonvaEventObject<DragEvent>) => void
   onDragEnd: (id: string, x: number, y: number) => void
   onTransformEnd: (id: string, attrs: { x: number; y: number; width: number; height: number }) => void
   onDoubleClick: (id: string) => void
@@ -24,6 +25,7 @@ export function StickyNote({
   isSelected,
   isEditing,
   onSelect,
+  onDragStart,
   onDragEnd,
   onTransformEnd,
   onDoubleClick,
@@ -59,6 +61,7 @@ export function StickyNote({
       draggable
       onClick={() => onSelect(obj.id)}
       onTap={() => onSelect(obj.id)}
+      onDragStart={onDragStart}
       onDragEnd={handleDragEnd}
       onTransformEnd={handleTransformEnd}
       onDblClick={() => onDoubleClick(obj.id)}

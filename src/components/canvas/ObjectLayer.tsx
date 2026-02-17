@@ -55,6 +55,12 @@ export function ObjectLayer() {
     patchObject(id, { ...attrs, updated_at })
   }
 
+  function handleDragStart(e: Konva.KonvaEventObject<DragEvent>) {
+    e.target.moveToTop()
+    // Keep the Transformer above everything
+    transformerRef.current?.moveToTop()
+  }
+
   function handleDoubleClick(id: string) {
     setEditingId(id)
   }
@@ -71,6 +77,7 @@ export function ObjectLayer() {
               isSelected={isSelected}
               isEditing={editingId === obj.id}
               onSelect={handleSelect}
+              onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
               onTransformEnd={handleTransformEnd}
               onDoubleClick={handleDoubleClick}
@@ -83,6 +90,7 @@ export function ObjectLayer() {
               key={obj.id}
               obj={obj}
               onSelect={handleSelect}
+              onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
               onTransformEnd={handleTransformEnd}
             />
@@ -94,6 +102,7 @@ export function ObjectLayer() {
               key={obj.id}
               obj={obj}
               onSelect={handleSelect}
+              onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
               onTransformEnd={handleTransformEnd}
             />
