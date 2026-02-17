@@ -44,3 +44,14 @@ export interface PresenceUser {
   color: string
   online_at: string
 }
+
+export interface AIToolCall {
+  id: string
+  type: 'function'
+  function: { name: string; arguments: string }
+}
+
+export interface AIResponse {
+  message: string
+  toolCalls: AIToolCall[]
+}
