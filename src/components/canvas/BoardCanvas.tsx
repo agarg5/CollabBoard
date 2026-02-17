@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Stage, Layer } from 'react-konva'
+import { Stage } from 'react-konva'
 import type Konva from 'konva'
 import { useUiStore } from '../../store/uiStore'
 import { BackgroundGrid } from './BackgroundGrid'
@@ -48,7 +48,7 @@ export function BoardCanvas() {
     [stageScale, stagePosition, setStageScale, setStagePosition],
   )
 
-  const handleDragEnd = useCallback(
+  const handleDragMove = useCallback(
     (e: Konva.KonvaEventObject<DragEvent>) => {
       const stage = e.target
       if (stage !== e.target.getStage()) return
@@ -69,7 +69,7 @@ export function BoardCanvas() {
           scaleY={stageScale}
           draggable
           onWheel={handleWheel}
-          onDragEnd={handleDragEnd}
+          onDragMove={handleDragMove}
         >
           <BackgroundGrid
             stageWidth={dimensions.width}
@@ -78,8 +78,6 @@ export function BoardCanvas() {
             stageY={stagePosition.y}
             scale={stageScale}
           />
-          {/* Objects layer - future board objects render here */}
-          <Layer />
         </Stage>
       )}
     </div>

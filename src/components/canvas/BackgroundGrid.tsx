@@ -1,8 +1,11 @@
-import { Circle, Layer } from 'react-konva'
+import { Shape, Layer } from 'react-konva'
+import type { Context } from 'konva/lib/Context'
+import type { Shape as ShapeType } from 'konva/lib/Shape'
 
-const GRID_SPACING = 40
+const BASE_GRID_SPACING = 40
 const DOT_RADIUS = 1.5
 const DOT_COLOR = '#d1d5db'
+const MIN_SCALE_FOR_DOTS = 0.15
 
 interface BackgroundGridProps {
   stageWidth: number
@@ -19,48 +22,41 @@ export function BackgroundGrid({
   stageY,
   scale,
 }: BackgroundGridProps) {
-  const dots = computeGridDots(stageWidth, stageHeight, stageX, stageY, scale)
+  if (scale < MIN_SCALE_FOR_DOTS) return <Layer listening={false} />
+
+  // Double spacing when zoomed out far to keep dot count reasonable
+  const spacing = scale < 0.4 ? BASE_GRID_SPACING * 2 : BASE_GRID_SPACING
 
   return (
     <Layer listening={false}>
-      {dots.map((dot) => (
-        <Circle
-          key={`${dot.x},${dot.y}`}
-          x={dot.x}
-          y={dot.y}
-          radius={DOT_RADIUS / scale}
-          fill={DOT_COLOR}
-          perfectDrawEnabled={false}
-          listening={false}
-        />
-      ))}
+      <Shape
+        sceneFunc={(ctx: Context, shape: ShapeType) => {
+          const buffer = spacing
+          const startWorldX = -stageX / scale - buffer
+          const startWorldY = -stageY / scale - buffer
+          const endWorldX = (stageWidth - stageX) / scale + buffer
+          const endWorldY = (stageHeight - stageY) / scale + buffer
+
+          const firstX = Math.floor(startWorldX / spacing) * spacing
+          const firstY = Math.floor(startWorldY / spacing) * spacing
+
+          const radius = DOT_RADIUS / scale
+          const _ctx = ctx._context
+          _ctx.fillStyle = DOT_COLOR
+
+          for (let x = firstX; x <= endWorldX; x += spacing) {
+            for (let y = firstY; y <= endWorldY; y += spacing) {
+              _ctx.beginPath()
+              _ctx.arc(x, y, radius, 0, Math.PI * 2)
+              _ctx.fill()
+            }
+          }
+
+          ctx.fillStrokeShape(shape)
+        }}
+        listening={false}
+        perfectDrawEnabled={false}
+      />
     </Layer>
   )
-}
-
-function computeGridDots(
-  stageWidth: number,
-  stageHeight: number,
-  stageX: number,
-  stageY: number,
-  scale: number,
-) {
-  const buffer = GRID_SPACING
-  // Visible area in world coordinates
-  const startWorldX = -stageX / scale - buffer
-  const startWorldY = -stageY / scale - buffer
-  const endWorldX = (stageWidth - stageX) / scale + buffer
-  const endWorldY = (stageHeight - stageY) / scale + buffer
-
-  // Snap to grid
-  const firstX = Math.floor(startWorldX / GRID_SPACING) * GRID_SPACING
-  const firstY = Math.floor(startWorldY / GRID_SPACING) * GRID_SPACING
-
-  const dots: { x: number; y: number }[] = []
-  for (let x = firstX; x <= endWorldX; x += GRID_SPACING) {
-    for (let y = firstY; y <= endWorldY; y += GRID_SPACING) {
-      dots.push({ x, y })
-    }
-  }
-  return dots
 }
