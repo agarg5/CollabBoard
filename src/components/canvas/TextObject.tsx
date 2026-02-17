@@ -7,8 +7,9 @@ interface TextObjectProps {
   obj: BoardObject
   isSelected: boolean
   isEditing: boolean
-  onSelect: (id: string) => void
+  onSelect: (id: string, e?: Konva.KonvaEventObject<MouseEvent>) => void
   onDragStart: (e: Konva.KonvaEventObject<DragEvent>) => void
+  onDragMove?: (e: Konva.KonvaEventObject<DragEvent>) => void
   onDragEnd: (id: string, x: number, y: number) => void
   onTransformEnd: (id: string, attrs: { x: number; y: number; width: number; height: number }) => void
   onDoubleClick: (id: string) => void
@@ -26,6 +27,7 @@ export function TextObject({
   isEditing,
   onSelect,
   onDragStart,
+  onDragMove,
   onDragEnd,
   onTransformEnd,
   onDoubleClick,
@@ -60,9 +62,10 @@ export function TextObject({
       width={obj.width}
       height={obj.height}
       draggable
-      onClick={() => onSelect(obj.id)}
+      onClick={(e) => onSelect(obj.id, e)}
       onTap={() => onSelect(obj.id)}
       onDragStart={onDragStart}
+      onDragMove={onDragMove}
       onDragEnd={handleDragEnd}
       onTransformEnd={handleTransformEnd}
       onDblClick={() => onDoubleClick(obj.id)}

@@ -27,6 +27,8 @@ export function ObjectLayer() {
 
   const transformerRef = useRef<Konva.Transformer>(null)
   const layerRef = useRef<Konva.Layer>(null)
+  // Stores initial positions of all selected objects when multi-drag starts
+  const dragStartPositions = useRef<Map<string, { x: number; y: number }>>(new Map())
 
   const selectedMins = useMemo(() => {
     if (selectedIds.length !== 1) return DEFAULT_MIN
@@ -46,14 +48,89 @@ export function ObjectLayer() {
     transformer.getLayer()?.batchDraw()
   }, [selectedIds])
 
-  function handleSelect(id: string) {
-    setSelectedIds([id])
+  function handleSelect(id: string, e?: Konva.KonvaEventObject<MouseEvent>) {
+    if (e?.evt.shiftKey) {
+      const current = useBoardStore.getState().selectedIds
+      if (current.includes(id)) {
+        setSelectedIds(current.filter((sid) => sid !== id))
+      } else {
+        setSelectedIds([...current, id])
+      }
+    } else {
+      setSelectedIds([id])
+    }
+  }
+
+  function handleDragStart(e: Konva.KonvaEventObject<DragEvent>) {
+    const draggedId = e.target.id()
+    const { selectedIds: ids } = useBoardStore.getState()
+
+    // If dragged object is not in selection, select only it
+    if (!ids.includes(draggedId)) {
+      setSelectedIds([draggedId])
+      dragStartPositions.current.clear()
+      return
+    }
+
+    // Store initial positions of all selected nodes for multi-drag
+    dragStartPositions.current.clear()
+    const layer = layerRef.current
+    if (!layer) return
+    for (const id of ids) {
+      const node = layer.findOne(`#${id}`)
+      if (node) {
+        dragStartPositions.current.set(id, { x: node.x(), y: node.y() })
+      }
+    }
+
+    e.target.moveToTop()
+    transformerRef.current?.moveToTop()
+  }
+
+  function handleDragMove(e: Konva.KonvaEventObject<DragEvent>) {
+    const draggedId = e.target.id()
+    const startPos = dragStartPositions.current.get(draggedId)
+    if (!startPos || dragStartPositions.current.size <= 1) return
+
+    const dx = e.target.x() - startPos.x
+    const dy = e.target.y() - startPos.y
+
+    const layer = layerRef.current
+    if (!layer) return
+
+    for (const [id, pos] of dragStartPositions.current) {
+      if (id === draggedId) continue
+      const node = layer.findOne(`#${id}`)
+      if (node) {
+        node.x(pos.x + dx)
+        node.y(pos.y + dy)
+      }
+    }
   }
 
   function handleDragEnd(id: string, x: number, y: number) {
     const updated_at = new Date().toISOString()
+
+    // If multi-drag, persist all selected objects
+    if (dragStartPositions.current.size > 1) {
+      const layer = layerRef.current
+      const { selectedIds: ids } = useBoardStore.getState()
+      for (const sid of ids) {
+        const node = layer?.findOne(`#${sid}`)
+        if (node) {
+          const nx = node.x()
+          const ny = node.y()
+          updateObject(sid, { x: nx, y: ny, updated_at })
+          patchObject(sid, { x: nx, y: ny, updated_at })
+        }
+      }
+      dragStartPositions.current.clear()
+      return
+    }
+
     updateObject(id, { x, y, updated_at })
     patchObject(id, { x, y, updated_at })
+    dragStartPositions.current.clear()
   }
 
   function handleTransformEnd(
@@ -63,12 +140,6 @@ export function ObjectLayer() {
     const updated_at = new Date().toISOString()
     updateObject(id, { ...attrs, updated_at })
     patchObject(id, { ...attrs, updated_at })
-  }
-
-  function handleDragStart(e: Konva.KonvaEventObject<DragEvent>) {
-    e.target.moveToTop()
-    // Keep the Transformer above everything
-    transformerRef.current?.moveToTop()
   }
 
   function handleDoubleClick(id: string) {
@@ -88,6 +159,7 @@ export function ObjectLayer() {
               isEditing={editingId === obj.id}
               onSelect={handleSelect}
               onDragStart={handleDragStart}
+              onDragMove={handleDragMove}
               onDragEnd={handleDragEnd}
               onTransformEnd={handleTransformEnd}
               onDoubleClick={handleDoubleClick}
@@ -101,6 +173,7 @@ export function ObjectLayer() {
               obj={obj}
               onSelect={handleSelect}
               onDragStart={handleDragStart}
+              onDragMove={handleDragMove}
               onDragEnd={handleDragEnd}
               onTransformEnd={handleTransformEnd}
             />
@@ -113,6 +186,7 @@ export function ObjectLayer() {
               obj={obj}
               onSelect={handleSelect}
               onDragStart={handleDragStart}
+              onDragMove={handleDragMove}
               onDragEnd={handleDragEnd}
               onTransformEnd={handleTransformEnd}
             />
@@ -127,6 +201,7 @@ export function ObjectLayer() {
               isEditing={editingId === obj.id}
               onSelect={handleSelect}
               onDragStart={handleDragStart}
+              onDragMove={handleDragMove}
               onDragEnd={handleDragEnd}
               onTransformEnd={handleTransformEnd}
               onDoubleClick={handleDoubleClick}
