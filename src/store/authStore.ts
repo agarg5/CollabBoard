@@ -6,7 +6,7 @@ const DEV_BYPASS_AUTH =
   import.meta.env.DEV && import.meta.env.VITE_DEV_BYPASS_AUTH === 'true'
 
 const DEV_USER = {
-  id: 'dev-user-000',
+  id: '00000000-0000-0000-0000-000000000000',
   email: 'dev@collabboard.local',
   aud: 'authenticated',
   role: 'authenticated',
