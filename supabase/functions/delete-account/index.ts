@@ -41,8 +41,20 @@ Deno.serve(async (req) => {
 
   // Use service role client for admin operations
   const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' }
 
-  // Delete user's board objects (from boards they own)
+  // Delete objects the user created on OTHER people's boards
+  const { error: foreignObjErr } = await adminClient
+    .from('board_objects')
+    .delete()
+    .eq('created_by', user.id)
+  if (foreignObjErr) {
+    return new Response(JSON.stringify({ error: `Failed to delete user objects: ${foreignObjErr.message}` }), {
+      status: 500, headers: jsonHeaders,
+    })
+  }
+
+  // Delete remaining objects on the user's own boards (created by collaborators)
   const { data: userBoards } = await adminClient
     .from('boards')
     .select('id')
@@ -50,11 +62,21 @@ Deno.serve(async (req) => {
 
   if (userBoards && userBoards.length > 0) {
     const boardIds = userBoards.map((b: { id: string }) => b.id)
-    await adminClient.from('board_objects').delete().in('board_id', boardIds)
+    const { error: boardObjErr } = await adminClient.from('board_objects').delete().in('board_id', boardIds)
+    if (boardObjErr) {
+      return new Response(JSON.stringify({ error: `Failed to delete board objects: ${boardObjErr.message}` }), {
+        status: 500, headers: jsonHeaders,
+      })
+    }
   }
 
   // Delete user's boards
-  await adminClient.from('boards').delete().eq('created_by', user.id)
+  const { error: boardsErr } = await adminClient.from('boards').delete().eq('created_by', user.id)
+  if (boardsErr) {
+    return new Response(JSON.stringify({ error: `Failed to delete boards: ${boardsErr.message}` }), {
+      status: 500, headers: jsonHeaders,
+    })
+  }
 
   // Delete the auth user
   const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id)
