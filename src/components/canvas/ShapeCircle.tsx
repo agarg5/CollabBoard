@@ -4,7 +4,6 @@ import type { BoardObject } from '../../types/board'
 
 interface ShapeCircleProps {
   obj: BoardObject
-  isSelected: boolean
   onSelect: (id: string) => void
   onDragEnd: (id: string, x: number, y: number) => void
   onTransformEnd: (id: string, attrs: { x: number; y: number; width: number; height: number }) => void
@@ -15,7 +14,6 @@ export const MIN_HEIGHT = 50
 
 export function ShapeCircle({
   obj,
-  isSelected,
   onSelect,
   onDragEnd,
   onTransformEnd,
@@ -59,8 +57,8 @@ export function ShapeCircle({
         radiusX={obj.width / 2}
         radiusY={obj.height / 2}
         fill={fillColor}
-        stroke={isSelected ? '#3b82f6' : strokeColor}
-        strokeWidth={isSelected ? 2 : strokeWidth}
+        stroke={strokeColor}
+        strokeWidth={strokeWidth}
       />
     </Group>
   )

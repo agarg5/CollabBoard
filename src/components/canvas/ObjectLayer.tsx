@@ -7,6 +7,8 @@ import { StickyNote, MIN_WIDTH as STICKY_MIN_W, MIN_HEIGHT as STICKY_MIN_H } fro
 import { ShapeRect, MIN_WIDTH as RECT_MIN_W, MIN_HEIGHT as RECT_MIN_H } from './ShapeRect'
 import { ShapeCircle, MIN_WIDTH as CIRCLE_MIN_W, MIN_HEIGHT as CIRCLE_MIN_H } from './ShapeCircle'
 
+// All shape types currently share the same min (50). If per-type mins diverge,
+// switch to a lookup by selected object type instead of a global min.
 const MIN_WIDTH = Math.min(STICKY_MIN_W, RECT_MIN_W, CIRCLE_MIN_W)
 const MIN_HEIGHT = Math.min(STICKY_MIN_H, RECT_MIN_H, CIRCLE_MIN_H)
 
@@ -73,7 +75,6 @@ export function ObjectLayer() {
             <ShapeRect
               key={obj.id}
               obj={obj}
-              isSelected={isSelected}
               onSelect={handleSelect}
               onDragEnd={handleDragEnd}
               onTransformEnd={handleTransformEnd}
@@ -85,7 +86,6 @@ export function ObjectLayer() {
             <ShapeCircle
               key={obj.id}
               obj={obj}
-              isSelected={isSelected}
               onSelect={handleSelect}
               onDragEnd={handleDragEnd}
               onTransformEnd={handleTransformEnd}
