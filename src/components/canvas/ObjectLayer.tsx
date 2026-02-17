@@ -8,6 +8,7 @@ import { StickyNote, MIN_WIDTH as STICKY_MIN_W, MIN_HEIGHT as STICKY_MIN_H } fro
 import { ShapeRect, MIN_WIDTH as RECT_MIN_W, MIN_HEIGHT as RECT_MIN_H } from './ShapeRect'
 import { ShapeCircle, MIN_WIDTH as CIRCLE_MIN_W, MIN_HEIGHT as CIRCLE_MIN_H } from './ShapeCircle'
 import { TextObject, MIN_WIDTH as TEXT_MIN_W, MIN_HEIGHT as TEXT_MIN_H } from './TextObject'
+import { Connector, MIN_WIDTH as CONN_MIN_W, MIN_HEIGHT as CONN_MIN_H } from './Connector'
 import type { SelectionRect } from './BoardCanvas'
 
 const MIN_SIZES: Record<string, { width: number; height: number }> = {
@@ -15,6 +16,7 @@ const MIN_SIZES: Record<string, { width: number; height: number }> = {
   rectangle: { width: RECT_MIN_W, height: RECT_MIN_H },
   circle: { width: CIRCLE_MIN_W, height: CIRCLE_MIN_H },
   text: { width: TEXT_MIN_W, height: TEXT_MIN_H },
+  connector: { width: CONN_MIN_W, height: CONN_MIN_H },
 }
 const DEFAULT_MIN = { width: 50, height: 50 }
 
@@ -113,6 +115,49 @@ export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
     }
   }
 
+  function updateConnectorEndpoints(movedId: string) {
+    const { objects: allObjects } = useBoardStore.getState()
+    const movedObj = allObjects.find((o) => o.id === movedId)
+    if (!movedObj) return
+
+    for (const conn of allObjects) {
+      if (conn.type !== 'connector') continue
+      const startId = conn.properties.startObjectId as string | undefined
+      const endId = conn.properties.endObjectId as string | undefined
+      if (startId !== movedId && endId !== movedId) continue
+
+      const startObj = startId ? allObjects.find((o) => o.id === startId) : null
+      const endObj = endId ? allObjects.find((o) => o.id === endId) : null
+
+      // Compute start point
+      let sx = conn.x
+      let sy = conn.y
+      if (startObj) {
+        sx = startObj.x + startObj.width / 2
+        sy = startObj.y + startObj.height / 2
+      }
+
+      // Compute end point
+      let ex = conn.x + conn.width
+      let ey = conn.y + conn.height
+      if (endObj) {
+        ex = endObj.x + endObj.width / 2
+        ey = endObj.y + endObj.height / 2
+      }
+
+      const updated_at = new Date().toISOString()
+      const patch = {
+        x: sx,
+        y: sy,
+        width: ex - sx,
+        height: ey - sy,
+        updated_at,
+      }
+      updateObject(conn.id, patch)
+      patchObject(conn.id, patch)
+    }
+  }
+
   function handleDragEnd(id: string, x: number, y: number) {
     const updated_at = new Date().toISOString()
 
@@ -129,12 +174,17 @@ export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
           patchObject(sid, { x: nx, y: ny, updated_at })
         }
       }
+      // Update connector endpoints for all moved objects
+      for (const sid of ids) {
+        updateConnectorEndpoints(sid)
+      }
       dragStartPositions.current.clear()
       return
     }
 
     updateObject(id, { x, y, updated_at })
     patchObject(id, { x, y, updated_at })
+    updateConnectorEndpoints(id)
     dragStartPositions.current.clear()
   }
 
@@ -145,6 +195,7 @@ export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
     const updated_at = new Date().toISOString()
     updateObject(id, { ...attrs, updated_at })
     patchObject(id, { ...attrs, updated_at })
+    updateConnectorEndpoints(id)
   }
 
   function handleDoubleClick(id: string) {
@@ -187,6 +238,19 @@ export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
         if (obj.type === 'circle') {
           return (
             <ShapeCircle
+              key={obj.id}
+              obj={obj}
+              onSelect={handleSelect}
+              onDragStart={handleDragStart}
+              onDragMove={handleDragMove}
+              onDragEnd={handleDragEnd}
+              onTransformEnd={handleTransformEnd}
+            />
+          )
+        }
+        if (obj.type === 'connector') {
+          return (
+            <Connector
               key={obj.id}
               obj={obj}
               onSelect={handleSelect}

@@ -21,6 +21,7 @@ const SHAPE_COLORS = [
 ]
 
 const SHAPE_TYPES = new Set(['rectangle', 'circle'])
+const STROKE_ONLY_TYPES = new Set(['connector'])
 
 function getMultiSelectColorInfo(selectedIds: string[], objects: BoardObject[]) {
   if (selectedIds.length === 0) return null
@@ -32,12 +33,17 @@ function getMultiSelectColorInfo(selectedIds: string[], objects: BoardObject[]) 
 
   // All sticky notes
   if (types.size === 1 && types.has('sticky_note')) {
-    return { palette: STICKY_COLORS, colorKey: 'color' as const, isShape: false }
+    return { palette: STICKY_COLORS, colorKey: 'color' as const, isShape: false, isStrokeOnly: false }
   }
 
-  // All shapes (rectangle/circle)
+  // All stroke-only types (connector)
+  if ([...types].every((t) => STROKE_ONLY_TYPES.has(t))) {
+    return { palette: SHAPE_COLORS, colorKey: 'strokeColor' as const, isShape: true, isStrokeOnly: true }
+  }
+
+  // All filled shapes (rectangle/circle)
   if ([...types].every((t) => SHAPE_TYPES.has(t))) {
-    return { palette: SHAPE_COLORS, colorKey: 'fillColor' as const, isShape: true }
+    return { palette: SHAPE_COLORS, colorKey: 'fillColor' as const, isShape: true, isStrokeOnly: false }
   }
 
   return null
@@ -72,9 +78,14 @@ export function Toolbar() {
     const updated_at = new Date().toISOString()
     const selectedObjs = objects.filter((o) => selectedIds.includes(o.id))
     for (const obj of selectedObjs) {
-      const properties = colorInfo.isShape
-        ? { ...obj.properties, fillColor: color }
-        : { ...obj.properties, color }
+      let properties: Record<string, unknown>
+      if (colorInfo.isStrokeOnly) {
+        properties = { ...obj.properties, strokeColor: color }
+      } else if (colorInfo.isShape) {
+        properties = { ...obj.properties, fillColor: color }
+      } else {
+        properties = { ...obj.properties, color }
+      }
       updateObject(obj.id, { properties, updated_at })
       patchObject(obj.id, { properties, updated_at })
     }
@@ -209,6 +220,35 @@ export function Toolbar() {
           />
         </svg>
         Circle
+      </button>
+      <button
+        onClick={() => setTool('connector')}
+        className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
+          tool === 'connector' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+        }`}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          className="inline-block mr-1 -mt-0.5"
+        >
+          <path
+            d="M3 13L13 3"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+          <path
+            d="M13 3L9 3M13 3L13 7"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        Connector
       </button>
       <button
         onClick={() => setTool('text')}
