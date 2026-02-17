@@ -2,6 +2,8 @@
 
 A real-time collaborative whiteboard application (similar to Miro) with an AI board agent. Multiple users can create sticky notes, shapes, and connectors on an infinite canvas with live multiplayer sync, cursors, and presence.
 
+**Live Demo:** [https://collabboard-ashy.vercel.app/](https://collabboard-ashy.vercel.app/)
+
 ## Quick Start
 
 ```bash
