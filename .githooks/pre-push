@@ -1,7 +1,3 @@
 #!/bin/sh
 echo "Running typecheck before push..."
-npm run typecheck
-if [ $? -ne 0 ]; then
-  echo "Typecheck failed. Push aborted."
-  exit 1
-fi
+npm run typecheck || { echo "Typecheck failed. Push aborted."; exit 1; }
