@@ -58,7 +58,7 @@ export function TextEditor() {
         height: height - scaledPadding * 2,
         fontSize: scaledFontSize,
         lineHeight: '1.2',
-        fontFamily: 'sans-serif',
+        fontFamily: 'Arial',
       }}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
