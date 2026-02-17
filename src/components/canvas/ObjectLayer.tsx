@@ -9,10 +9,13 @@ import { ShapeRect, MIN_WIDTH as RECT_MIN_W, MIN_HEIGHT as RECT_MIN_H } from './
 import { ShapeCircle, MIN_WIDTH as CIRCLE_MIN_W, MIN_HEIGHT as CIRCLE_MIN_H } from './ShapeCircle'
 import { TextObject, MIN_WIDTH as TEXT_MIN_W, MIN_HEIGHT as TEXT_MIN_H } from './TextObject'
 
-// All shape types currently share the same min (50). If per-type mins diverge,
-// switch to a lookup by selected object type instead of a global min.
-const MIN_WIDTH = Math.min(STICKY_MIN_W, RECT_MIN_W, CIRCLE_MIN_W, TEXT_MIN_W)
-const MIN_HEIGHT = Math.min(STICKY_MIN_H, RECT_MIN_H, CIRCLE_MIN_H, TEXT_MIN_H)
+const MIN_SIZES: Record<string, { width: number; height: number }> = {
+  sticky_note: { width: STICKY_MIN_W, height: STICKY_MIN_H },
+  rectangle: { width: RECT_MIN_W, height: RECT_MIN_H },
+  circle: { width: CIRCLE_MIN_W, height: CIRCLE_MIN_H },
+  text: { width: TEXT_MIN_W, height: TEXT_MIN_H },
+}
+const DEFAULT_MIN = { width: 50, height: 50 }
 
 export function ObjectLayer() {
   const objects = useBoardStore((s) => s.objects)
@@ -129,11 +132,17 @@ export function ObjectLayer() {
       <Transformer
         ref={transformerRef}
         keepRatio={false}
-        boundBoxFunc={(_oldBox, newBox) => ({
-          ...newBox,
-          width: Math.max(MIN_WIDTH, newBox.width),
-          height: Math.max(MIN_HEIGHT, newBox.height),
-        })}
+        boundBoxFunc={(_oldBox, newBox) => {
+          const selectedType = selectedIds.length === 1
+            ? objects.find((o) => o.id === selectedIds[0])?.type
+            : undefined
+          const mins = (selectedType && MIN_SIZES[selectedType]) || DEFAULT_MIN
+          return {
+            ...newBox,
+            width: Math.max(mins.width, newBox.width),
+            height: Math.max(mins.height, newBox.height),
+          }
+        }}
         anchorSize={8}
         anchorCornerRadius={2}
         borderStroke="#3b82f6"
