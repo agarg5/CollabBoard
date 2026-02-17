@@ -5,13 +5,14 @@ import { useBoardListStore } from '../../store/boardListStore'
 import type { Board } from '../../types/board'
 
 export function BoardListPage() {
-  const { user, signOut } = useAuthStore()
+  const { user, signOut, deleteAccount } = useAuthStore()
   const setBoardId = useBoardStore((s) => s.setBoardId)
   const { boards, loading, fetchBoards, createBoard, deleteBoard } = useBoardListStore()
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [newBoardName, setNewBoardName] = useState('')
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deletingAccount, setDeletingAccount] = useState(false)
 
   useEffect(() => {
     if (user) fetchBoards(user.id)
@@ -39,6 +40,17 @@ export function BoardListPage() {
     if (!success) {
       window.alert('Failed to delete board. Please try again.')
     }
+  }
+
+  async function handleDeleteAccount() {
+    const confirmed = window.confirm(
+      'Delete your account? All your boards and data will be permanently removed.',
+    )
+    if (!confirmed) return
+    setDeletingAccount(true)
+    const err = await deleteAccount()
+    setDeletingAccount(false)
+    if (err) window.alert(`Failed to delete account: ${err}`)
   }
 
   if (loading) return renderLoading()
@@ -86,6 +98,13 @@ export function BoardListPage() {
             className="px-4 py-2 text-sm cursor-pointer rounded hover:bg-gray-100 transition-colors"
           >
             Sign out
+          </button>
+          <button
+            onClick={handleDeleteAccount}
+            disabled={deletingAccount}
+            className="px-4 py-2 text-sm cursor-pointer rounded text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {deletingAccount ? 'Deleting...' : 'Delete Account'}
           </button>
         </div>
       </header>

@@ -23,6 +23,7 @@ interface AuthState {
   signInWithEmail: (email: string, password: string) => Promise<string | null>
   signUpWithEmail: (email: string, password: string) => Promise<string | null>
   signOut: () => Promise<void>
+  deleteAccount: () => Promise<string | null>
   initialize: () => () => void
 }
 
@@ -53,6 +54,32 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     await supabase.auth.signOut()
     set({ user: null, session: null })
+  },
+
+  deleteAccount: async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return 'Not authenticated'
+
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+      },
+    )
+
+    if (!response.ok) {
+      const body = await response.json()
+      return body.error ?? 'Failed to delete account'
+    }
+
+    await supabase.auth.signOut()
+    set({ user: null, session: null })
+    return null
   },
 
   initialize: () => {
