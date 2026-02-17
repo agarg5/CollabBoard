@@ -12,12 +12,10 @@ const COLORS = [
 export function Toolbar() {
   const tool = useUiStore((s) => s.tool)
   const setTool = useUiStore((s) => s.setTool)
-  const selectedIds = useBoardStore((s) => s.selectedIds)
-  const objects = useBoardStore((s) => s.objects)
+  const selectedObj = useBoardStore((s) =>
+    s.selectedIds.length === 1 ? s.objects.find((o) => o.id === s.selectedIds[0]) : null,
+  )
   const updateObject = useBoardStore((s) => s.updateObject)
-
-  const selectedObj =
-    selectedIds.length === 1 ? objects.find((o) => o.id === selectedIds[0]) : null
   const showColors = selectedObj?.type === 'sticky_note'
 
   function handleColorChange(color: string) {

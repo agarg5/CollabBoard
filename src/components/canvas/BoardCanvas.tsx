@@ -87,7 +87,7 @@ export function BoardCanvas() {
         y: worldY - 100,
         width: 200,
         height: 200,
-        z_index: Date.now(),
+        z_index: useBoardStore.getState().objects.reduce((max, o) => Math.max(max, o.z_index), 0) + 1,
         created_by: '',
         updated_at: new Date().toISOString(),
       }

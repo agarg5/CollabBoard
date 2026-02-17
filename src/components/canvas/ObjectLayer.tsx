@@ -48,7 +48,7 @@ export function ObjectLayer() {
 
   return (
     <Layer ref={layerRef}>
-      {objects.map((obj) => {
+      {[...objects].sort((a, b) => a.z_index - b.z_index).map((obj) => {
         if (obj.type === 'sticky_note') {
           return (
             <StickyNote
