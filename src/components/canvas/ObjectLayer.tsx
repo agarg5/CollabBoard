@@ -114,6 +114,7 @@ export function ObjectLayer() {
             <TextObject
               key={obj.id}
               obj={obj}
+              isSelected={isSelected}
               isEditing={editingId === obj.id}
               onSelect={handleSelect}
               onDragStart={handleDragStart}

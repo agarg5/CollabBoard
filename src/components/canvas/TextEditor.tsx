@@ -41,6 +41,7 @@ export function TextEditor() {
     if (!obj || !textareaRef.current) return
     const text = textareaRef.current.value
     const updated_at = new Date().toISOString()
+    // TODO: persist color/fontSize changes from a future text color picker
     const properties = { ...obj.properties, text }
     updateObject(obj.id, { properties, updated_at })
     patchObject(obj.id, { properties, updated_at })

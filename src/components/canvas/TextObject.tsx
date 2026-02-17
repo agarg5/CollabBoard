@@ -1,9 +1,11 @@
-import { Group, Text } from 'react-konva'
+import { Group, Rect, Text } from 'react-konva'
 import type Konva from 'konva'
 import type { BoardObject } from '../../types/board'
+import { FONT_FAMILY } from './StickyNote'
 
 interface TextObjectProps {
   obj: BoardObject
+  isSelected: boolean
   isEditing: boolean
   onSelect: (id: string) => void
   onDragStart: (e: Konva.KonvaEventObject<DragEvent>) => void
@@ -13,14 +15,14 @@ interface TextObjectProps {
 }
 
 export const FONT_SIZE = 16
-export const FONT_FAMILY = 'Arial'
 export const LINE_HEIGHT = 1.4
 export const MIN_WIDTH = 50
-export const MIN_HEIGHT = 24
+export const MIN_HEIGHT = 32
 const PADDING = 4
 
 export function TextObject({
   obj,
+  isSelected,
   isEditing,
   onSelect,
   onDragStart,
@@ -66,6 +68,14 @@ export function TextObject({
       onDblClick={() => onDoubleClick(obj.id)}
       onDblTap={() => onDoubleClick(obj.id)}
     >
+      <Rect
+        width={obj.width}
+        height={obj.height}
+        fill="transparent"
+        stroke={isSelected ? '#3b82f6' : undefined}
+        strokeWidth={isSelected ? 1 : 0}
+        dash={isSelected ? [4, 4] : undefined}
+      />
       {!isEditing && (
         <Text
           width={obj.width}
