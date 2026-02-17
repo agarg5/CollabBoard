@@ -1,6 +1,6 @@
 import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
-import { patchObject } from '../../lib/boardSync'
+import { patchObject, deleteObject } from '../../lib/boardSync'
 
 const STICKY_COLORS = [
   { name: 'Yellow', value: '#fef08a' },
@@ -21,10 +21,12 @@ const SHAPE_COLORS = [
 export function Toolbar() {
   const tool = useUiStore((s) => s.tool)
   const setTool = useUiStore((s) => s.setTool)
+  const selectedIds = useBoardStore((s) => s.selectedIds)
   const selectedObj = useBoardStore((s) =>
     s.selectedIds.length === 1 ? s.objects.find((o) => o.id === s.selectedIds[0]) : null,
   )
   const updateObject = useBoardStore((s) => s.updateObject)
+  const deleteSelectedObjects = useBoardStore((s) => s.deleteSelectedObjects)
 
   const isShape = selectedObj?.type === 'rectangle' || selectedObj?.type === 'circle'
   const showStickyColors = selectedObj?.type === 'sticky_note'
@@ -144,6 +146,36 @@ export function Toolbar() {
         </svg>
         Circle
       </button>
+
+      {selectedIds.length > 0 && (
+        <>
+          <div className="w-px h-6 bg-gray-300 mx-1" />
+          <button
+            title="Delete selected"
+            onClick={() => {
+              const deletedIds = deleteSelectedObjects()
+              deletedIds.forEach((id) => deleteObject(id))
+            }}
+            className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-red-100 text-red-600"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              className="inline-block -mt-0.5"
+            >
+              <path
+                d="M5 2V1h6v1h4v2H1V2h4zM2 5h12l-1 10H3L2 5zm4 2v6m4-6v6"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </>
+      )}
 
       {colors && (
         <>

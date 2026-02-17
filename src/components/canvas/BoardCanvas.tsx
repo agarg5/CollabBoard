@@ -9,7 +9,7 @@ import { ObjectLayer } from './ObjectLayer'
 import { CursorLayer } from './CursorLayer'
 import { TextEditor } from './TextEditor'
 import { calculateZoom } from './zoomHelper'
-import { insertObject } from '../../lib/boardSync'
+import { insertObject, deleteObject } from '../../lib/boardSync'
 import type { BoardObject } from '../../types/board'
 
 interface BoardCanvasProps {
@@ -28,6 +28,22 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
   const setStageScale = useUiStore((s) => s.setStageScale)
   const addObject = useBoardStore((s) => s.addObject)
   const setSelectedIds = useBoardStore((s) => s.setSelectedIds)
+  const deleteSelectedObjects = useBoardStore((s) => s.deleteSelectedObjects)
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return
+      const { selectedIds } = useBoardStore.getState()
+      if (selectedIds.length === 0) return
+      if (useUiStore.getState().editingId !== null) return
+
+      e.preventDefault()
+      const deletedIds = deleteSelectedObjects()
+      deletedIds.forEach((id) => deleteObject(id))
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [deleteSelectedObjects])
 
   useEffect(() => {
     const container = containerRef.current

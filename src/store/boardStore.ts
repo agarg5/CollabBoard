@@ -11,9 +11,10 @@ interface BoardState {
   removeObject: (id: string) => void
   setObjects: (objects: BoardObject[]) => void
   setSelectedIds: (ids: string[]) => void
+  deleteSelectedObjects: () => string[]
 }
 
-export const useBoardStore = create<BoardState>((set) => ({
+export const useBoardStore = create<BoardState>((set, get) => ({
   boardId: DEFAULT_BOARD_ID,
   objects: [],
   selectedIds: [],
@@ -29,4 +30,12 @@ export const useBoardStore = create<BoardState>((set) => ({
     })),
   setObjects: (objects) => set({ objects }),
   setSelectedIds: (ids) => set({ selectedIds: ids }),
+  deleteSelectedObjects: () => {
+    const { selectedIds, objects } = get()
+    set({
+      objects: objects.filter((o) => !selectedIds.includes(o.id)),
+      selectedIds: [],
+    })
+    return selectedIds
+  },
 }))
