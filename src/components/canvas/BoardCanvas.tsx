@@ -130,6 +130,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
       }
 
       const { boardId, objects } = useBoardStore.getState()
+      if (!boardId) return
       const rawId = useAuthStore.getState().user?.id
       const userId = rawId && /^[0-9a-f-]{36}$/i.test(rawId) ? rawId : null
       const newObj: BoardObject = {
