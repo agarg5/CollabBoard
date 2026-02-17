@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 interface UiState {
-  tool: 'select' | 'hand' | 'sticky_note' | 'rectangle' | 'circle' | 'text' | 'connector'
+  tool: 'select' | 'hand' | 'sticky_note' | 'rectangle' | 'circle' | 'line' | 'text' | 'connector'
   stagePosition: { x: number; y: number }
   stageScale: number
   editingId: string | null
