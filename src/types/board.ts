@@ -35,3 +35,10 @@ export interface CursorPosition {
   y: number
   color: string
 }
+
+export interface PresenceUser {
+  user_id: string
+  user_name: string
+  color: string
+  online_at: string
+}

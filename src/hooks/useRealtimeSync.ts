@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
-import { supabase } from '../lib/supabase'
 import { fetchObjects } from '../lib/boardSync'
 import { useBoardStore } from '../store/boardStore'
 import type { BoardObject } from '../types/board'
@@ -35,6 +34,7 @@ export function handleRealtimePayload(
   }
 }
 
+/** Fetches initial board objects. Channel lifecycle is managed by useBoardChannel. */
 export function useRealtimeSync(boardId: string) {
   useEffect(() => {
     let cancelled = false
@@ -43,23 +43,8 @@ export function useRealtimeSync(boardId: string) {
       if (!cancelled) useBoardStore.getState().setObjects(objects)
     })
 
-    const channel = supabase
-      .channel(`board:${boardId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'board_objects',
-          filter: `board_id=eq.${boardId}`,
-        },
-        handleRealtimePayload,
-      )
-      .subscribe()
-
     return () => {
       cancelled = true
-      supabase.removeChannel(channel)
     }
   }, [boardId])
 }
