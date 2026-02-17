@@ -1,10 +1,26 @@
 import { test, expect } from '@playwright/test'
+import { createClient } from '@supabase/supabase-js'
 
 const TEST_EMAIL = `test-${Date.now()}@collabboard.test`
 const TEST_PASSWORD = 'TestPass123!'
 
 test.describe('Auth flows', () => {
   test.describe.configure({ mode: 'serial' })
+
+  // Clean up test user if still present (e.g. prior run failed before delete test)
+  test.afterAll(async () => {
+    const url = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!url || !serviceKey) return
+
+    const admin = createClient(url, serviceKey)
+    const { data } = await admin.auth.admin.listUsers()
+    const testUser = data?.users?.find((u) => u.email === TEST_EMAIL)
+    if (testUser) {
+      await admin.rpc('delete_user_data', { target_user_id: testUser.id })
+      await admin.auth.admin.deleteUser(testUser.id)
+    }
+  })
 
   test('sign up with email/password', async ({ page }) => {
     await page.goto('/')
@@ -46,7 +62,6 @@ test.describe('Auth flows', () => {
     ])
 
     if (result === 'error') {
-      // Email confirmation required — skip remaining tests
       test.skip(true, 'Email confirmation required; cannot test sign-in flow')
     }
 
@@ -55,7 +70,6 @@ test.describe('Auth flows', () => {
   })
 
   test('sign out', async ({ page }) => {
-    // Sign in first
     await page.goto('/')
     await page.getByPlaceholder('Email').fill(TEST_EMAIL)
     await page.getByPlaceholder('Password').fill(TEST_PASSWORD)
@@ -79,7 +93,6 @@ test.describe('Auth flows', () => {
   })
 
   test('delete account', async ({ page }) => {
-    // Sign in first
     await page.goto('/')
     await page.getByPlaceholder('Email').fill(TEST_EMAIL)
     await page.getByPlaceholder('Password').fill(TEST_PASSWORD)
