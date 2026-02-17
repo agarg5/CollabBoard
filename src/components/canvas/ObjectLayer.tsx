@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Layer, Transformer } from 'react-konva'
 import type Konva from 'konva'
 import { useBoardStore } from '../../store/boardStore'
@@ -27,6 +27,12 @@ export function ObjectLayer() {
 
   const transformerRef = useRef<Konva.Transformer>(null)
   const layerRef = useRef<Konva.Layer>(null)
+
+  const selectedMins = useMemo(() => {
+    if (selectedIds.length !== 1) return DEFAULT_MIN
+    const type = objects.find((o) => o.id === selectedIds[0])?.type
+    return (type && MIN_SIZES[type]) || DEFAULT_MIN
+  }, [selectedIds, objects])
 
   useEffect(() => {
     const transformer = transformerRef.current
@@ -132,17 +138,11 @@ export function ObjectLayer() {
       <Transformer
         ref={transformerRef}
         keepRatio={false}
-        boundBoxFunc={(_oldBox, newBox) => {
-          const selectedType = selectedIds.length === 1
-            ? objects.find((o) => o.id === selectedIds[0])?.type
-            : undefined
-          const mins = (selectedType && MIN_SIZES[selectedType]) || DEFAULT_MIN
-          return {
-            ...newBox,
-            width: Math.max(mins.width, newBox.width),
-            height: Math.max(mins.height, newBox.height),
-          }
-        }}
+        boundBoxFunc={(_oldBox, newBox) => ({
+          ...newBox,
+          width: Math.max(selectedMins.width, newBox.width),
+          height: Math.max(selectedMins.height, newBox.height),
+        })}
         anchorSize={8}
         anchorCornerRadius={2}
         borderStroke="#3b82f6"

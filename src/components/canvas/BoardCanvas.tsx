@@ -110,7 +110,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
     const clickedOnEmpty =
       target === stage || (target.getParent() === stage && target.nodeType === 'Layer')
 
-    if (CREATION_TOOLS.has(tool) && stage) {
+    if (CREATION_TOOLS.has(tool) && stage && (tool === 'text' || clickedOnEmpty)) {
       const pointer = stage.getPointerPosition()
       if (!pointer) return
 

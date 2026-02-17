@@ -18,7 +18,7 @@ export const FONT_SIZE = 16
 export const LINE_HEIGHT = 1.4
 export const MIN_WIDTH = 50
 export const MIN_HEIGHT = 32
-const PADDING = 4
+export const PADDING = 4
 
 export function TextObject({
   obj,

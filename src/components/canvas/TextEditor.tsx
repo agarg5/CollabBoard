@@ -3,7 +3,7 @@ import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
 import { patchObject } from '../../lib/boardSync'
 import { PADDING as STICKY_PADDING, FONT_SIZE as STICKY_FONT_SIZE, FONT_FAMILY, LINE_HEIGHT as STICKY_LINE_HEIGHT } from './StickyNote'
-import { FONT_SIZE as TEXT_FONT_SIZE, LINE_HEIGHT as TEXT_LINE_HEIGHT } from './TextObject'
+import { FONT_SIZE as TEXT_FONT_SIZE, LINE_HEIGHT as TEXT_LINE_HEIGHT, PADDING as TEXT_PADDING } from './TextObject'
 
 export function TextEditor() {
   const editingId = useUiStore((s) => s.editingId)
@@ -27,7 +27,7 @@ export function TextEditor() {
 
   const isText = obj.type === 'text'
   const fontSize = isText ? ((obj.properties.fontSize as number) || TEXT_FONT_SIZE) : STICKY_FONT_SIZE
-  const padding = isText ? 4 : STICKY_PADDING
+  const padding = isText ? TEXT_PADDING : STICKY_PADDING
   const lineHeight = isText ? TEXT_LINE_HEIGHT : STICKY_LINE_HEIGHT
 
   const x = obj.x * stageScale + stagePosition.x
