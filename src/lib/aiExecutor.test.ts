@@ -149,6 +149,12 @@ describe('aiExecutor', () => {
       expect(obj.x).toBe(500)
       expect(obj.y).toBe(600)
     })
+
+    it('returns error for missing object', async () => {
+      const tc = makeToolCall('moveObject', { objectId: 'nonexistent', x: 0, y: 0 })
+      const result = await executeToolCall(tc, ctx)
+      expect((result.result as { error: string }).error).toBe('Object not found')
+    })
   })
 
   describe('resizeObject', () => {
@@ -160,6 +166,12 @@ describe('aiExecutor', () => {
       const obj = useBoardStore.getState().objects[0]
       expect(obj.width).toBe(400)
       expect(obj.height).toBe(300)
+    })
+
+    it('returns error for missing object', async () => {
+      const tc = makeToolCall('resizeObject', { objectId: 'nonexistent', width: 10, height: 10 })
+      const result = await executeToolCall(tc, ctx)
+      expect((result.result as { error: string }).error).toBe('Object not found')
     })
   })
 
@@ -182,7 +194,7 @@ describe('aiExecutor', () => {
   })
 
   describe('changeColor', () => {
-    it('updates color property of an object', async () => {
+    it('updates color property of a sticky note', async () => {
       useBoardStore.getState().addObject(makeObject())
       const tc = makeToolCall('changeColor', { objectId: 'existing-1', color: '#ff0000' })
       await executeToolCall(tc, ctx)
@@ -190,6 +202,18 @@ describe('aiExecutor', () => {
       const obj = useBoardStore.getState().objects[0]
       expect(obj.properties.color).toBe('#ff0000')
       expect(obj.properties.text).toBe('Hello') // preserved
+    })
+
+    it('updates fillColor for shapes', async () => {
+      useBoardStore.getState().addObject(
+        makeObject({ id: 'rect-1', type: 'rectangle', properties: { fillColor: '#3b82f6', strokeColor: '#1e293b' } }),
+      )
+      const tc = makeToolCall('changeColor', { objectId: 'rect-1', color: '#ff0000' })
+      await executeToolCall(tc, ctx)
+
+      const obj = useBoardStore.getState().objects[0]
+      expect(obj.properties.fillColor).toBe('#ff0000')
+      expect(obj.properties.strokeColor).toBe('#1e293b') // preserved
     })
   })
 
@@ -202,6 +226,12 @@ describe('aiExecutor', () => {
       await executeToolCall(tc, ctx)
 
       expect(useBoardStore.getState().objects).toHaveLength(0)
+    })
+
+    it('returns error for missing object', async () => {
+      const tc = makeToolCall('deleteObject', { objectId: 'nonexistent' })
+      const result = await executeToolCall(tc, ctx)
+      expect((result.result as { error: string }).error).toBe('Object not found')
     })
   })
 
@@ -235,6 +265,20 @@ describe('aiExecutor', () => {
       const tc = makeToolCall('nonExistentTool', {})
       const result = await executeToolCall(tc, ctx)
       expect((result.result as { error: string }).error).toBe('Unknown tool: nonExistentTool')
+    })
+  })
+
+  describe('invalid arguments', () => {
+    it('returns error for malformed JSON args', async () => {
+      const tc: AIToolCall = {
+        id: 'call_bad',
+        type: 'function',
+        function: { name: 'createStickyNote', arguments: '{not valid json' },
+      }
+      const result = await executeToolCall(tc, ctx)
+      expect((result.result as { error: string }).error).toBe(
+        'Invalid arguments JSON for tool: createStickyNote',
+      )
     })
   })
 })

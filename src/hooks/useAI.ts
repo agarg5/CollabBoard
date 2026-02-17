@@ -32,34 +32,39 @@ export function useAI() {
 
     const boardState = useBoardStore.getState().objects
 
-    const res = await fetch(AI_FUNCTION_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ prompt, boardState }),
-    })
-
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({ error: 'Request failed' }))
-      const msg = (body as { error?: string }).error ?? 'AI request failed'
-      setError(msg)
-      setLoading(false)
-      return null
-    }
-
-    const data = (await res.json()) as AIResponse
-
-    for (const toolCall of data.toolCalls) {
-      await executeToolCall(toolCall, {
-        boardId,
-        userId: session.user.id,
+    try {
+      const res = await fetch(AI_FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ prompt, boardState }),
       })
-    }
 
-    setLoading(false)
-    return data.message
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: 'Request failed' }))
+        const msg = (body as { error?: string }).error ?? 'AI request failed'
+        setError(msg)
+        return null
+      }
+
+      const data = (await res.json()) as AIResponse
+
+      for (const toolCall of data.toolCalls) {
+        await executeToolCall(toolCall, {
+          boardId,
+          userId: session.user.id,
+        })
+      }
+
+      return data.message
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'AI request failed')
+      return null
+    } finally {
+      setLoading(false)
+    }
   }
 
   return { sendPrompt, loading, error }

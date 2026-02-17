@@ -121,6 +121,8 @@ const toolHandlers: Record<string, ToolHandler> = {
 
   async moveObject(args) {
     const id = args.objectId as string
+    const obj = useBoardStore.getState().objects.find((o) => o.id === id)
+    if (!obj) return { error: 'Object not found' }
     const changes: Partial<BoardObject> = {
       x: args.x as number,
       y: args.y as number,
@@ -133,6 +135,8 @@ const toolHandlers: Record<string, ToolHandler> = {
 
   async resizeObject(args) {
     const id = args.objectId as string
+    const obj = useBoardStore.getState().objects.find((o) => o.id === id)
+    if (!obj) return { error: 'Object not found' }
     const changes: Partial<BoardObject> = {
       width: args.width as number,
       height: args.height as number,
@@ -160,8 +164,10 @@ const toolHandlers: Record<string, ToolHandler> = {
     const id = args.objectId as string
     const obj = useBoardStore.getState().objects.find((o) => o.id === id)
     if (!obj) return { error: 'Object not found' }
+    const color = args.color as string
+    const colorKey = obj.type === 'rectangle' || obj.type === 'circle' ? 'fillColor' : 'color'
     const changes: Partial<BoardObject> = {
-      properties: { ...obj.properties, color: args.color as string },
+      properties: { ...obj.properties, [colorKey]: color },
       updated_at: new Date().toISOString(),
     }
     useBoardStore.getState().updateObject(id, changes)
@@ -171,6 +177,8 @@ const toolHandlers: Record<string, ToolHandler> = {
 
   async deleteObject(args) {
     const id = args.objectId as string
+    const obj = useBoardStore.getState().objects.find((o) => o.id === id)
+    if (!obj) return { error: 'Object not found' }
     useBoardStore.getState().removeObject(id)
     await deleteObject(id)
     return { deleted: id }
@@ -186,7 +194,14 @@ export async function executeToolCall(
   context: ExecutionContext,
 ): Promise<ToolResult> {
   const { name, arguments: rawArgs } = toolCall.function
-  const args = JSON.parse(rawArgs) as Record<string, unknown>
+
+  let args: Record<string, unknown>
+  try {
+    args = JSON.parse(rawArgs) as Record<string, unknown>
+  } catch {
+    return { id: toolCall.id, result: { error: `Invalid arguments JSON for tool: ${name}` } }
+  }
+
   const handler = toolHandlers[name]
   if (!handler) {
     return { id: toolCall.id, result: { error: `Unknown tool: ${name}` } }
