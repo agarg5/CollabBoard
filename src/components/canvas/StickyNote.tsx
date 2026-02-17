@@ -50,6 +50,8 @@ export function StickyNote({
       id={obj.id}
       x={obj.x}
       y={obj.y}
+      width={obj.width}
+      height={obj.height}
       draggable
       onClick={() => onSelect(obj.id)}
       onTap={() => onSelect(obj.id)}
