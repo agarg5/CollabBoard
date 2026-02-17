@@ -1,0 +1,83 @@
+import { useEffect, useRef } from 'react'
+import { Layer, Transformer } from 'react-konva'
+import type Konva from 'konva'
+import { useBoardStore } from '../../store/boardStore'
+import { useUiStore } from '../../store/uiStore'
+import { StickyNote } from './StickyNote'
+
+export function ObjectLayer() {
+  const objects = useBoardStore((s) => s.objects)
+  const selectedIds = useBoardStore((s) => s.selectedIds)
+  const setSelectedIds = useBoardStore((s) => s.setSelectedIds)
+  const updateObject = useBoardStore((s) => s.updateObject)
+  const setEditingId = useUiStore((s) => s.setEditingId)
+
+  const transformerRef = useRef<Konva.Transformer>(null)
+  const layerRef = useRef<Konva.Layer>(null)
+
+  useEffect(() => {
+    const transformer = transformerRef.current
+    const layer = layerRef.current
+    if (!transformer || !layer) return
+
+    const nodes = selectedIds
+      .map((id) => layer.findOne(`#${id}`))
+      .filter(Boolean) as Konva.Node[]
+    transformer.nodes(nodes)
+    transformer.getLayer()?.batchDraw()
+  }, [selectedIds])
+
+  function handleSelect(id: string) {
+    setSelectedIds([id])
+  }
+
+  function handleDragEnd(id: string, x: number, y: number) {
+    updateObject(id, { x, y })
+  }
+
+  function handleTransformEnd(
+    id: string,
+    attrs: { x: number; y: number; width: number; height: number },
+  ) {
+    updateObject(id, attrs)
+  }
+
+  function handleDoubleClick(id: string) {
+    setEditingId(id)
+  }
+
+  return (
+    <Layer ref={layerRef}>
+      {objects.map((obj) => {
+        if (obj.type === 'sticky_note') {
+          return (
+            <StickyNote
+              key={obj.id}
+              obj={obj}
+              isSelected={selectedIds.includes(obj.id)}
+              onSelect={handleSelect}
+              onDragEnd={handleDragEnd}
+              onTransformEnd={handleTransformEnd}
+              onDoubleClick={handleDoubleClick}
+            />
+          )
+        }
+        return null
+      })}
+      <Transformer
+        ref={transformerRef}
+        keepRatio={false}
+        boundBoxFunc={(_oldBox, newBox) => {
+          if (newBox.width < 100) newBox.width = 100
+          if (newBox.height < 60) newBox.height = 60
+          return newBox
+        }}
+        anchorSize={8}
+        anchorCornerRadius={2}
+        borderStroke="#3b82f6"
+        anchorStroke="#3b82f6"
+        anchorFill="#ffffff"
+      />
+    </Layer>
+  )
+}
