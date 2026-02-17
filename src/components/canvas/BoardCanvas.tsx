@@ -108,7 +108,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
     const clickedOnEmpty =
       target === stage || (target.getParent() === stage && target.nodeType === 'Layer')
 
-    if ((tool === 'sticky_note' || tool === 'rectangle' || tool === 'circle') && clickedOnEmpty && stage) {
+    if ((tool === 'sticky_note' || tool === 'rectangle' || tool === 'circle' || tool === 'text') && clickedOnEmpty && stage) {
       const pointer = stage.getPointerPosition()
       if (!pointer) return
 
@@ -127,6 +127,10 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
         width = 120
         height = 120
         properties = { fillColor: '#ec4899', strokeColor: '#1e293b', strokeWidth: 2 }
+      } else if (tool === 'text') {
+        width = 200
+        height = 32
+        properties = { text: '', color: '#1e293b', fontSize: 16 }
       }
 
       const { boardId, objects } = useBoardStore.getState()
@@ -148,6 +152,9 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
       addObject(newObj)
       insertObject(newObj)
       setSelectedIds([newObj.id])
+      if (tool === 'text') {
+        useUiStore.getState().setEditingId(newObj.id)
+      }
       setTool('select')
       return
     }
