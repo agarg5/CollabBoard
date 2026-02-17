@@ -102,6 +102,15 @@ describe('aiExecutor', () => {
       expect(obj.type).toBe('circle')
       expect(obj.properties.fillColor).toBe('#ff0000')
     })
+
+    it('rejects invalid shapeType', async () => {
+      const tc = makeToolCall('createShape', { shapeType: 'triangle', x: 0, y: 0 })
+      const result = await executeToolCall(tc, ctx)
+      expect((result.result as { error: string }).error).toBe(
+        'Invalid shapeType: triangle. Must be one of: rectangle, circle',
+      )
+      expect(useBoardStore.getState().objects).toHaveLength(0)
+    })
   })
 
   describe('createFrame', () => {

@@ -73,7 +73,11 @@ const toolHandlers: Record<string, ToolHandler> = {
   async createShape(args, ctx) {
     const err = requireArgs(args, { shapeType: 'string', x: 'number', y: 'number' })
     if (err) return { error: err }
-    const shapeType = args.shapeType as 'rectangle' | 'circle'
+    const validShapes = ['rectangle', 'circle'] as const
+    const shapeType = args.shapeType as string
+    if (!validShapes.includes(shapeType as (typeof validShapes)[number])) {
+      return { error: `Invalid shapeType: ${shapeType}. Must be one of: ${validShapes.join(', ')}` }
+    }
     const obj = buildObject(
       {
         type: shapeType,
