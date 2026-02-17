@@ -1,16 +1,42 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import { REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { handleRealtimePayload } from './useRealtimeSync'
 import { useAuthStore } from '../store/authStore'
 import { usePresenceStore } from '../store/presenceStore'
+import { useBoardStore } from '../store/boardStore'
+import { useConnectionStore } from '../store/connectionStore'
+import { fetchObjects } from '../lib/boardSync'
 import { getCursorColor } from '../lib/cursorColors'
 import type { CursorPosition, PresenceUser } from '../types/board'
 
+function trackPresence(ch: RealtimeChannel) {
+  const user = useAuthStore.getState().user
+  if (!user) return
+  const name = user.user_metadata?.full_name || user.email || 'Anonymous'
+  ch.track({
+    user_id: user.id,
+    user_name: name,
+    color: getCursorColor(user.id),
+    online_at: new Date().toISOString(),
+  })
+}
+
+async function refetchBoard(boardId: string) {
+  const objects = await fetchObjects(boardId)
+  useBoardStore.getState().setObjects(objects)
+}
+
 export function useBoardChannel(boardId: string) {
   const [channel, setChannel] = useState<RealtimeChannel | null>(null)
+  const wasSubscribed = useRef(false)
 
   useEffect(() => {
+    const { setStatus } = useConnectionStore.getState()
+    setStatus('connecting')
+    wasSubscribed.current = false
+
     const ch = supabase
       .channel(`board:${boardId}`)
       .on(
@@ -55,22 +81,28 @@ export function useBoardChannel(boardId: string) {
           usePresenceStore.getState().removeCursor(data.user_id)
         }
       })
-      .subscribe()
+      .subscribe((status) => {
+        if (status === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED) {
+          if (wasSubscribed.current) {
+            setStatus('reconnecting')
+            refetchBoard(boardId).then(() => setStatus('connected'))
+            trackPresence(ch)
+          } else {
+            setStatus('connected')
+          }
+          wasSubscribed.current = true
+        } else if (
+          status === REALTIME_SUBSCRIBE_STATES.CHANNEL_ERROR ||
+          status === REALTIME_SUBSCRIBE_STATES.TIMED_OUT
+        ) {
+          setStatus('error')
+        } else if (status === REALTIME_SUBSCRIBE_STATES.CLOSED) {
+          setStatus('reconnecting')
+        }
+      })
 
     setChannel(ch)
-
-    // Track own presence after subscribe
-    const user = useAuthStore.getState().user
-    if (user) {
-      const name =
-        user.user_metadata?.full_name || user.email || 'Anonymous'
-      ch.track({
-        user_id: user.id,
-        user_name: name,
-        color: getCursorColor(user.id),
-        online_at: new Date().toISOString(),
-      })
-    }
+    trackPresence(ch)
 
     return () => {
       setChannel(null)
