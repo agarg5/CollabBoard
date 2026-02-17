@@ -53,6 +53,25 @@ describe('boardStore', () => {
     expect(useBoardStore.getState().selectedIds).toHaveLength(0)
   })
 
+  it('setBoardId clears objects and selectedIds', () => {
+    useBoardStore.getState().addObject(makeObject({ id: 'a' }))
+    useBoardStore.getState().setSelectedIds(['a'])
+    useBoardStore.getState().setBoardId('new-board')
+
+    expect(useBoardStore.getState().boardId).toBe('new-board')
+    expect(useBoardStore.getState().objects).toHaveLength(0)
+    expect(useBoardStore.getState().selectedIds).toHaveLength(0)
+  })
+
+  it('setBoardId with null clears board state', () => {
+    useBoardStore.setState({ boardId: 'some-board' })
+    useBoardStore.getState().addObject(makeObject({ id: 'a' }))
+    useBoardStore.getState().setBoardId(null)
+
+    expect(useBoardStore.getState().boardId).toBeNull()
+    expect(useBoardStore.getState().objects).toHaveLength(0)
+  })
+
   it('deleteSelectedObjects removes objects and clears selection', () => {
     useBoardStore.getState().addObject(makeObject({ id: 'a' }))
     useBoardStore.getState().addObject(makeObject({ id: 'b' }))

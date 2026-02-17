@@ -6,14 +6,15 @@ import { useRealtimeSync } from './hooks/useRealtimeSync'
 import { usePresenceCursors } from './hooks/usePresenceCursors'
 import { LoginPage } from './components/auth/LoginPage'
 import { BoardCanvas } from './components/canvas/BoardCanvas'
+import { BoardListPage } from './components/ui/BoardListPage'
 import { Toolbar } from './components/ui/Toolbar'
 import { PresencePanel } from './components/ui/PresencePanel'
 import { ConnectionStatus } from './components/ui/ConnectionStatus'
 import './App.css'
 
-function BoardView() {
+function BoardView({ boardId }: { boardId: string }) {
   const { user, signOut } = useAuthStore()
-  const boardId = useBoardStore((s) => s.boardId)
+  const setBoardId = useBoardStore((s) => s.setBoardId)
 
   const channel = useBoardChannel(boardId)
   useRealtimeSync(boardId)
@@ -23,6 +24,13 @@ function BoardView() {
     <div className="flex flex-col w-screen h-screen">
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setBoardId(null)}
+            aria-label="Back to boards"
+            className="px-3 py-1.5 text-sm cursor-pointer rounded hover:bg-gray-100 transition-colors"
+          >
+            &larr; Boards
+          </button>
           <h1 className="text-xl font-semibold">CollabBoard</h1>
           <ConnectionStatus />
         </div>
@@ -43,6 +51,13 @@ function BoardView() {
   )
 }
 
+function AuthenticatedApp() {
+  const boardId = useBoardStore((s) => s.boardId)
+
+  if (!boardId) return <BoardListPage />
+  return <BoardView boardId={boardId} />
+}
+
 function App() {
   const { user, loading, initialize } = useAuthStore()
 
@@ -53,7 +68,7 @@ function App() {
 
   if (loading) return renderLoading()
   if (!user) return <LoginPage />
-  return <BoardView />
+  return <AuthenticatedApp />
 
   function renderLoading() {
     return (
