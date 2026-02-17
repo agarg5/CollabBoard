@@ -3,10 +3,12 @@ import { Stage } from 'react-konva'
 import type Konva from 'konva'
 import { useUiStore } from '../../store/uiStore'
 import { useBoardStore } from '../../store/boardStore'
+import { useAuthStore } from '../../store/authStore'
 import { BackgroundGrid } from './BackgroundGrid'
 import { ObjectLayer } from './ObjectLayer'
 import { TextEditor } from './TextEditor'
 import { calculateZoom } from './zoomHelper'
+import { insertObject } from '../../lib/boardSync'
 import type { BoardObject } from '../../types/board'
 
 export function BoardCanvas() {
@@ -92,20 +94,23 @@ export function BoardCanvas() {
         properties = { fillColor: '#ec4899', strokeColor: '#1e293b', strokeWidth: 2 }
       }
 
+      const { boardId, objects } = useBoardStore.getState()
+      const userId = useAuthStore.getState().user?.id ?? ''
       const newObj: BoardObject = {
         id: crypto.randomUUID(),
-        board_id: '',
+        board_id: boardId,
         type: tool,
         properties,
         x: worldX - width / 2,
         y: worldY - height / 2,
         width,
         height,
-        z_index: useBoardStore.getState().objects.reduce((max, o) => Math.max(max, o.z_index), 0) + 1,
-        created_by: '',
+        z_index: objects.reduce((max, o) => Math.max(max, o.z_index), 0) + 1,
+        created_by: userId,
         updated_at: new Date().toISOString(),
       }
       addObject(newObj)
+      insertObject(newObj)
       setSelectedIds([newObj.id])
       setTool('select')
       return

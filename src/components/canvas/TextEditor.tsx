@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
+import { patchObject } from '../../lib/boardSync'
 import { PADDING, FONT_SIZE } from './StickyNote'
 
 export function TextEditor() {
@@ -33,9 +34,10 @@ export function TextEditor() {
   function handleBlur() {
     if (!obj || !textareaRef.current) return
     const text = textareaRef.current.value
-    updateObject(obj.id, {
-      properties: { ...obj.properties, text },
-    })
+    const updated_at = new Date().toISOString()
+    const properties = { ...obj.properties, text }
+    updateObject(obj.id, { properties, updated_at })
+    patchObject(obj.id, { properties, updated_at })
     setEditingId(null)
   }
 

@@ -1,5 +1,6 @@
 import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
+import { patchObject } from '../../lib/boardSync'
 
 const STICKY_COLORS = [
   { name: 'Yellow', value: '#fef08a' },
@@ -31,15 +32,12 @@ export function Toolbar() {
 
   function handleColorChange(color: string) {
     if (!selectedObj) return
-    if (isShape) {
-      updateObject(selectedObj.id, {
-        properties: { ...selectedObj.properties, fillColor: color },
-      })
-    } else {
-      updateObject(selectedObj.id, {
-        properties: { ...selectedObj.properties, color },
-      })
-    }
+    const updated_at = new Date().toISOString()
+    const properties = isShape
+      ? { ...selectedObj.properties, fillColor: color }
+      : { ...selectedObj.properties, color }
+    updateObject(selectedObj.id, { properties, updated_at })
+    patchObject(selectedObj.id, { properties, updated_at })
   }
 
   const colors = showStickyColors ? STICKY_COLORS : showShapeColors ? SHAPE_COLORS : null
