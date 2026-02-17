@@ -37,7 +37,7 @@ export function TextEditor() {
     const updated_at = new Date().toISOString()
     const properties = { ...obj.properties, text }
     updateObject(obj.id, { properties, updated_at })
-    patchObject(obj.id, { properties })
+    patchObject(obj.id, { properties, updated_at })
     setEditingId(null)
   }
 

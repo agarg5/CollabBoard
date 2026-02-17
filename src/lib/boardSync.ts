@@ -23,7 +23,7 @@ export async function patchObject(
 ): Promise<void> {
   const { error } = await supabase
     .from('board_objects')
-    .update({ ...changes, updated_at: new Date().toISOString() })
+    .update(changes)
     .eq('id', id)
 
   if (error) throw error

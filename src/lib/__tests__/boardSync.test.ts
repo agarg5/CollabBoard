@@ -66,16 +66,15 @@ describe('boardSync', () => {
     expect(chain.insert).toHaveBeenCalledWith(obj)
   })
 
-  it('patchObject updates by id with updated_at', async () => {
+  it('patchObject updates by id with caller-provided changes', async () => {
     const chain = chainMock({ error: null })
     mockFrom.mockReturnValue(chain)
 
-    await patchObject('obj-1', { x: 50, y: 60 })
+    const updated_at = '2026-02-16T00:00:00.000Z'
+    await patchObject('obj-1', { x: 50, y: 60, updated_at })
 
     expect(mockFrom).toHaveBeenCalledWith('board_objects')
-    expect(chain.update).toHaveBeenCalledWith(
-      expect.objectContaining({ x: 50, y: 60, updated_at: expect.any(String) }),
-    )
+    expect(chain.update).toHaveBeenCalledWith({ x: 50, y: 60, updated_at })
     expect(chain.eq).toHaveBeenCalledWith('id', 'obj-1')
   })
 
