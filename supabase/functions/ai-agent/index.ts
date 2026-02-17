@@ -1,9 +1,13 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
+const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') ?? '*'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
@@ -173,6 +177,20 @@ const TOOLS = [
   {
     type: 'function',
     function: {
+      name: 'deleteObject',
+      description: 'Delete an object from the board',
+      parameters: {
+        type: 'object',
+        properties: {
+          objectId: { type: 'string', description: 'UUID of the object to delete' },
+        },
+        required: ['objectId'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'getBoardState',
       description:
         'Get the current state of all objects on the board. Use this when you need to examine what exists before making changes.',
@@ -193,7 +211,42 @@ Deno.serve(async (req) => {
     })
   }
 
-  const { prompt, boardState, messageHistory } = await req.json()
+  // Verify JWT — reject unauthenticated requests
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  })
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  // Parse request body
+  let body: Record<string, unknown>
+  try {
+    body = await req.json()
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const { prompt, boardState, messageHistory } = body as {
+    prompt?: string
+    boardState?: unknown[]
+    messageHistory?: Array<{ role: string; content: string }>
+  }
 
   if (!prompt) {
     return new Response(JSON.stringify({ error: 'prompt is required' }), {
