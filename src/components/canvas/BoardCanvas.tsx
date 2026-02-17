@@ -3,7 +3,7 @@ import { Stage } from 'react-konva'
 import type Konva from 'konva'
 import { useUiStore } from '../../store/uiStore'
 import { useBoardStore } from '../../store/boardStore'
-import { useAuthStore } from '../../store/authStore'
+import { useAuthStore, getValidUserId } from '../../store/authStore'
 import { BackgroundGrid } from './BackgroundGrid'
 import { ObjectLayer } from './ObjectLayer'
 import { CursorLayer } from './CursorLayer'
@@ -67,9 +67,11 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const editing = useUiStore.getState().editingId !== null
+      if (editing) return
+
+      const mod = e.metaKey || e.ctrlKey
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (editing) return
         const { selectedIds } = useBoardStore.getState()
         if (selectedIds.length === 0) return
         e.preventDefault()
@@ -78,15 +80,33 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
         return
       }
 
-      if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
-        if (editing) return
+      if (mod && e.key === 'a') {
         e.preventDefault()
         selectAll()
         return
       }
 
+      if (mod && e.key === 'd') {
+        e.preventDefault()
+        const newObjects = useBoardStore.getState().duplicateSelected(getValidUserId())
+        newObjects.forEach((obj) => insertObject(obj))
+        return
+      }
+
+      if (mod && e.key === 'c') {
+        e.preventDefault()
+        useBoardStore.getState().copySelected()
+        return
+      }
+
+      if (mod && e.key === 'v') {
+        e.preventDefault()
+        const newObjects = useBoardStore.getState().pasteClipboard(getValidUserId())
+        newObjects.forEach((obj) => insertObject(obj))
+        return
+      }
+
       if (e.key === ' ' && !e.repeat) {
-        if (editing) return
         e.preventDefault()
         setIsSpaceHeld(true)
       }
@@ -319,8 +339,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
 
       const { boardId, objects } = useBoardStore.getState()
       if (!boardId) return
-      const rawId = useAuthStore.getState().user?.id
-      const userId = rawId && /^[0-9a-f-]{36}$/i.test(rawId) ? rawId : null
+      const userId = getValidUserId()
       const newObj: BoardObject = {
         id: crypto.randomUUID(),
         board_id: boardId,
