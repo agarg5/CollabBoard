@@ -55,7 +55,7 @@ export function ObjectLayer() {
     patchObject(id, { ...attrs, updated_at })
   }
 
-  function handleDragStart(e: import('konva').default.KonvaEventObject<DragEvent>) {
+  function handleDragStart(e: Konva.KonvaEventObject<DragEvent>) {
     e.target.moveToTop()
     // Keep the Transformer above everything
     transformerRef.current?.moveToTop()
