@@ -1,5 +1,6 @@
 import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
+import { patchObject } from '../../lib/boardSync'
 
 const COLORS = [
   { name: 'Yellow', value: '#fef08a' },
@@ -20,9 +21,10 @@ export function Toolbar() {
 
   function handleColorChange(color: string) {
     if (!selectedObj) return
-    updateObject(selectedObj.id, {
-      properties: { ...selectedObj.properties, color },
-    })
+    const updated_at = new Date().toISOString()
+    const properties = { ...selectedObj.properties, color }
+    updateObject(selectedObj.id, { properties, updated_at })
+    patchObject(selectedObj.id, { properties })
   }
 
   return (

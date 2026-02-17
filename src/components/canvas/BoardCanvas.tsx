@@ -3,10 +3,12 @@ import { Stage } from 'react-konva'
 import type Konva from 'konva'
 import { useUiStore } from '../../store/uiStore'
 import { useBoardStore } from '../../store/boardStore'
+import { useAuthStore } from '../../store/authStore'
 import { BackgroundGrid } from './BackgroundGrid'
 import { ObjectLayer } from './ObjectLayer'
 import { TextEditor } from './TextEditor'
 import { calculateZoom } from './zoomHelper'
+import { insertObject } from '../../lib/boardSync'
 import type { BoardObject } from '../../types/board'
 
 export function BoardCanvas() {
@@ -78,20 +80,23 @@ export function BoardCanvas() {
       const worldX = (pointer.x - stagePosition.x) / stageScale
       const worldY = (pointer.y - stagePosition.y) / stageScale
 
+      const { boardId, objects } = useBoardStore.getState()
+      const userId = useAuthStore.getState().user?.id ?? ''
       const newNote: BoardObject = {
         id: crypto.randomUUID(),
-        board_id: '',
+        board_id: boardId,
         type: 'sticky_note',
         properties: { text: '', color: '#fef08a' },
         x: worldX - 100,
         y: worldY - 100,
         width: 200,
         height: 200,
-        z_index: useBoardStore.getState().objects.reduce((max, o) => Math.max(max, o.z_index), 0) + 1,
-        created_by: '',
+        z_index: objects.reduce((max, o) => Math.max(max, o.z_index), 0) + 1,
+        created_by: userId,
         updated_at: new Date().toISOString(),
       }
       addObject(newNote)
+      insertObject(newNote)
       setSelectedIds([newNote.id])
       setTool('select')
       return

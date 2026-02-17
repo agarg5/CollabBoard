@@ -3,6 +3,7 @@ import { Layer, Transformer } from 'react-konva'
 import type Konva from 'konva'
 import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
+import { patchObject } from '../../lib/boardSync'
 import { StickyNote, MIN_WIDTH, MIN_HEIGHT } from './StickyNote'
 
 export function ObjectLayer() {
@@ -32,14 +33,18 @@ export function ObjectLayer() {
   }
 
   function handleDragEnd(id: string, x: number, y: number) {
-    updateObject(id, { x, y })
+    const updated_at = new Date().toISOString()
+    updateObject(id, { x, y, updated_at })
+    patchObject(id, { x, y })
   }
 
   function handleTransformEnd(
     id: string,
     attrs: { x: number; y: number; width: number; height: number },
   ) {
-    updateObject(id, attrs)
+    const updated_at = new Date().toISOString()
+    updateObject(id, { ...attrs, updated_at })
+    patchObject(id, attrs)
   }
 
   function handleDoubleClick(id: string) {

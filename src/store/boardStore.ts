@@ -1,7 +1,9 @@
 import { create } from 'zustand'
 import type { BoardObject } from '../types/board'
+import { DEFAULT_BOARD_ID } from '../lib/constants'
 
 interface BoardState {
+  boardId: string
   objects: BoardObject[]
   selectedIds: string[]
   addObject: (obj: BoardObject) => void
@@ -12,6 +14,7 @@ interface BoardState {
 }
 
 export const useBoardStore = create<BoardState>((set) => ({
+  boardId: DEFAULT_BOARD_ID,
   objects: [],
   selectedIds: [],
   addObject: (obj) => set((state) => ({ objects: [...state.objects, obj] })),
