@@ -8,6 +8,7 @@ import { StickyNote, MIN_WIDTH as STICKY_MIN_W, MIN_HEIGHT as STICKY_MIN_H } fro
 import { ShapeRect, MIN_WIDTH as RECT_MIN_W, MIN_HEIGHT as RECT_MIN_H } from './ShapeRect'
 import { ShapeCircle, MIN_WIDTH as CIRCLE_MIN_W, MIN_HEIGHT as CIRCLE_MIN_H } from './ShapeCircle'
 import { TextObject, MIN_WIDTH as TEXT_MIN_W, MIN_HEIGHT as TEXT_MIN_H } from './TextObject'
+import { ShapeLine, MIN_WIDTH as LINE_MIN_W, MIN_HEIGHT as LINE_MIN_H } from './ShapeLine'
 import type { SelectionRect } from './BoardCanvas'
 
 const MIN_SIZES: Record<string, { width: number; height: number }> = {
@@ -15,6 +16,7 @@ const MIN_SIZES: Record<string, { width: number; height: number }> = {
   rectangle: { width: RECT_MIN_W, height: RECT_MIN_H },
   circle: { width: CIRCLE_MIN_W, height: CIRCLE_MIN_H },
   text: { width: TEXT_MIN_W, height: TEXT_MIN_H },
+  line: { width: LINE_MIN_W, height: LINE_MIN_H },
 }
 const DEFAULT_MIN = { width: 50, height: 50 }
 
@@ -187,6 +189,19 @@ export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
         if (obj.type === 'circle') {
           return (
             <ShapeCircle
+              key={obj.id}
+              obj={obj}
+              onSelect={handleSelect}
+              onDragStart={handleDragStart}
+              onDragMove={handleDragMove}
+              onDragEnd={handleDragEnd}
+              onTransformEnd={handleTransformEnd}
+            />
+          )
+        }
+        if (obj.type === 'line') {
+          return (
+            <ShapeLine
               key={obj.id}
               obj={obj}
               onSelect={handleSelect}
