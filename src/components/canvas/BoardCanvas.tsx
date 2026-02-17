@@ -31,9 +31,12 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
   const [isSpaceHeld, setIsSpaceHeld] = useState(false)
   // selectionRect is state because it drives rendering of the visual rect.
+  // selectionRectRef mirrors it so handleMouseUp can read the latest value
+  // without capturing a stale closure (avoids re-creating the callback each frame).
   // isPanningRef/isSelectingRef are refs because they only gate logic in
   // event handlers and don't need to trigger re-renders.
   const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null)
+  const selectionRectRef = useRef<SelectionRect | null>(null)
 
   const isPanningRef = useRef(false)
   const panStartRef = useRef({ x: 0, y: 0 })
@@ -54,6 +57,11 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
   const setSelectedIds = useBoardStore((s) => s.setSelectedIds)
   const deleteSelectedObjects = useBoardStore((s) => s.deleteSelectedObjects)
   const selectAll = useBoardStore((s) => s.selectAll)
+
+  function updateSelectionRect(rect: SelectionRect | null) {
+    selectionRectRef.current = rect
+    setSelectionRect(rect)
+  }
 
   // Keyboard: delete, spacebar, Ctrl/Cmd+A
   useEffect(() => {
@@ -187,7 +195,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
         isSelectingRef.current = true
         interactionStartedRef.current = true
         selectionStartRef.current = { x: worldX, y: worldY }
-        setSelectionRect({ x: worldX, y: worldY, width: 0, height: 0 })
+        updateSelectionRect({ x: worldX, y: worldY, width: 0, height: 0 })
       }
     },
     [isSpaceHeld],
@@ -219,7 +227,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
       if (isSelectingRef.current) {
         const startX = selectionStartRef.current.x
         const startY = selectionStartRef.current.y
-        setSelectionRect({
+        updateSelectionRect({
           x: Math.min(startX, worldX),
           y: Math.min(startY, worldY),
           width: Math.abs(worldX - startX),
@@ -240,8 +248,11 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
 
       if (isSelectingRef.current) {
         isSelectingRef.current = false
-        const rect = selectionRect
-        setSelectionRect(null)
+        // Read from ref to avoid stale closure — selectionRect state updates
+        // every frame during drag, so capturing it in useCallback deps would
+        // re-create this handler on every mouse move.
+        const rect = selectionRectRef.current
+        updateSelectionRect(null)
 
         if (!rect || (rect.width < SELECTION_THRESHOLD && rect.height < SELECTION_THRESHOLD)) {
           // Too small — treat as a click, let handleStageClick handle deselect
@@ -259,11 +270,11 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
             obj.y + obj.height > rect.y
           )
         })
-        setSelectedIds(hits.map((o) => o.id))
+        useBoardStore.getState().setSelectedIds(hits.map((o) => o.id))
         // interactionStartedRef stays true until click fires
       }
     },
-    [selectionRect, setSelectedIds],
+    [],
   )
 
   function handleStageClick(e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {

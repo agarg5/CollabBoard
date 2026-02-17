@@ -19,6 +19,8 @@ const SHAPE_COLORS = [
   { name: 'Gray', value: '#6b7280' },
 ]
 
+const SHAPE_TYPES = new Set(['rectangle', 'circle'])
+
 function getMultiSelectColorInfo(selectedIds: string[], objects: BoardObject[]) {
   if (selectedIds.length === 0) return null
 
@@ -33,8 +35,7 @@ function getMultiSelectColorInfo(selectedIds: string[], objects: BoardObject[]) 
   }
 
   // All shapes (rectangle/circle)
-  const shapeTypes = new Set(['rectangle', 'circle'])
-  if ([...types].every((t) => shapeTypes.has(t))) {
+  if ([...types].every((t) => SHAPE_TYPES.has(t))) {
     return { palette: SHAPE_COLORS, colorKey: 'fillColor' as const, isShape: true }
   }
 
