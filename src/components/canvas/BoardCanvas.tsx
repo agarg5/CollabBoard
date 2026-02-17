@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Stage, Layer, Rect } from 'react-konva'
+import { Stage } from 'react-konva'
 import type Konva from 'konva'
 import { useUiStore } from '../../store/uiStore'
 import { useBoardStore } from '../../store/boardStore'
@@ -19,7 +19,7 @@ interface BoardCanvasProps {
   broadcastCursor: (worldX: number, worldY: number) => void
 }
 
-interface SelectionRect {
+export interface SelectionRect {
   x: number
   y: number
   width: number
@@ -30,6 +30,9 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
   const [isSpaceHeld, setIsSpaceHeld] = useState(false)
+  // selectionRect is state because it drives rendering of the visual rect.
+  // isPanningRef/isSelectingRef are refs because they only gate logic in
+  // event handlers and don't need to trigger re-renders.
   const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null)
 
   const isPanningRef = useRef(false)
@@ -37,7 +40,9 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
   const panStartStageRef = useRef({ x: 0, y: 0 })
   const isSelectingRef = useRef(false)
   const selectionStartRef = useRef({ x: 0, y: 0 })
-  const justFinishedDragRef = useRef(false)
+  // Tracks whether the current mousedown initiated a pan or selection drag,
+  // so the subsequent click event can be suppressed without setTimeout.
+  const interactionStartedRef = useRef(false)
 
   const tool = useUiStore((s) => s.tool)
   const setTool = useUiStore((s) => s.setTool)
@@ -55,7 +60,6 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
     function handleKeyDown(e: KeyboardEvent) {
       const editing = useUiStore.getState().editingId !== null
 
-      // Delete/Backspace
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (editing) return
         const { selectedIds } = useBoardStore.getState()
@@ -66,7 +70,6 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
         return
       }
 
-      // Ctrl/Cmd+A — select all
       if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
         if (editing) return
         e.preventDefault()
@@ -74,7 +77,6 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
         return
       }
 
-      // Spacebar — enable panning mode
       if (e.key === ' ' && !e.repeat) {
         if (editing) return
         e.preventDefault()
@@ -95,6 +97,17 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
       window.removeEventListener('keyup', handleKeyUp)
     }
   }, [deleteSelectedObjects, selectAll])
+
+  // Prevent middle-click autoscroll on the container
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    function preventMiddleClick(e: MouseEvent) {
+      if (e.button === 1) e.preventDefault()
+    }
+    container.addEventListener('mousedown', preventMiddleClick)
+    return () => container.removeEventListener('mousedown', preventMiddleClick)
+  }, [])
 
   // Resize observer
   useEffect(() => {
@@ -137,46 +150,48 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
     return target === stage || (target.getParent() === stage && target.nodeType === 'Layer')
   }
 
-  function shouldPan(e: Konva.KonvaEventObject<MouseEvent>): boolean {
-    const evt = e.evt
-    // Middle-click drag
-    if (evt.button === 1) return true
-    // Space held + left click
-    if (isSpaceHeld && evt.button === 0) return true
-    // Hand tool + left click
-    if (tool === 'hand' && evt.button === 0) return true
-    return false
-  }
+  const handleMouseDown = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      const stage = e.target.getStage()
+      if (!stage) return
 
-  function handleMouseDown(e: Konva.KonvaEventObject<MouseEvent>) {
-    const stage = e.target.getStage()
-    if (!stage) return
+      const currentTool = useUiStore.getState().tool
+      const spaceHeld = isSpaceHeld
 
-    // Panning?
-    if (shouldPan(e)) {
-      e.evt.preventDefault()
-      isPanningRef.current = true
-      panStartRef.current = { x: e.evt.clientX, y: e.evt.clientY }
-      const { stagePosition: pos } = useUiStore.getState()
-      panStartStageRef.current = { x: pos.x, y: pos.y }
-      return
-    }
+      // Determine if we should pan
+      const evt = e.evt
+      const shouldPanNow =
+        evt.button === 1 ||
+        (spaceHeld && evt.button === 0) ||
+        (currentTool === 'hand' && evt.button === 0)
 
-    // Only left click from here
-    if (e.evt.button !== 0) return
+      if (shouldPanNow) {
+        evt.preventDefault()
+        isPanningRef.current = true
+        interactionStartedRef.current = true
+        panStartRef.current = { x: evt.clientX, y: evt.clientY }
+        const { stagePosition: pos } = useUiStore.getState()
+        panStartStageRef.current = { x: pos.x, y: pos.y }
+        return
+      }
 
-    // Selection rect — only on empty canvas with select tool
-    if (tool === 'select' && isClickOnEmpty(e)) {
-      const pointer = stage.getPointerPosition()
-      if (!pointer) return
-      const { stagePosition: pos, stageScale: scale } = useUiStore.getState()
-      const worldX = (pointer.x - pos.x) / scale
-      const worldY = (pointer.y - pos.y) / scale
-      isSelectingRef.current = true
-      selectionStartRef.current = { x: worldX, y: worldY }
-      setSelectionRect({ x: worldX, y: worldY, width: 0, height: 0 })
-    }
-  }
+      if (evt.button !== 0) return
+
+      // Selection rect — only on empty canvas with select tool
+      if (currentTool === 'select' && isClickOnEmpty(e)) {
+        const pointer = stage.getPointerPosition()
+        if (!pointer) return
+        const { stagePosition: pos, stageScale: scale } = useUiStore.getState()
+        const worldX = (pointer.x - pos.x) / scale
+        const worldY = (pointer.y - pos.y) / scale
+        isSelectingRef.current = true
+        interactionStartedRef.current = true
+        selectionStartRef.current = { x: worldX, y: worldY }
+        setSelectionRect({ x: worldX, y: worldY, width: 0, height: 0 })
+      }
+    },
+    [isSpaceHeld],
+  )
 
   const handleMouseMove = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -186,13 +201,11 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
       const pointer = stage.getPointerPosition()
       if (!pointer) return
 
-      // Broadcast cursor position
       const { stagePosition: pos, stageScale: scale } = useUiStore.getState()
       const worldX = (pointer.x - pos.x) / scale
       const worldY = (pointer.y - pos.y) / scale
       broadcastCursor(worldX, worldY)
 
-      // Panning
       if (isPanningRef.current) {
         const dx = e.evt.clientX - panStartRef.current.x
         const dy = e.evt.clientY - panStartRef.current.y
@@ -203,7 +216,6 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
         return
       }
 
-      // Selection rect
       if (isSelectingRef.current) {
         const startX = selectionStartRef.current.x
         const startY = selectionStartRef.current.y
@@ -218,52 +230,54 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
     [broadcastCursor],
   )
 
-  function handleMouseUp(_e: Konva.KonvaEventObject<MouseEvent>) {
-    // Finish panning
-    if (isPanningRef.current) {
-      isPanningRef.current = false
-      justFinishedDragRef.current = true
-      setTimeout(() => { justFinishedDragRef.current = false }, 0)
-      return
-    }
-
-    // Finish selection rect
-    if (isSelectingRef.current) {
-      isSelectingRef.current = false
-      const rect = selectionRect
-      setSelectionRect(null)
-
-      if (!rect || (rect.width < SELECTION_THRESHOLD && rect.height < SELECTION_THRESHOLD)) {
-        // Too small — treat as a click (deselect handled in handleStageClick)
+  const handleMouseUp = useCallback(
+    (_e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (isPanningRef.current) {
+        isPanningRef.current = false
+        // interactionStartedRef stays true until click fires
         return
       }
 
-      justFinishedDragRef.current = true
-      setTimeout(() => { justFinishedDragRef.current = false }, 0)
+      if (isSelectingRef.current) {
+        isSelectingRef.current = false
+        const rect = selectionRect
+        setSelectionRect(null)
 
-      // AABB intersection test
-      const objects = useBoardStore.getState().objects
-      const hits = objects.filter((obj) => {
-        return (
-          obj.x < rect.x + rect.width &&
-          obj.x + obj.width > rect.x &&
-          obj.y < rect.y + rect.height &&
-          obj.y + obj.height > rect.y
-        )
-      })
-      setSelectedIds(hits.map((o) => o.id))
-    }
-  }
+        if (!rect || (rect.width < SELECTION_THRESHOLD && rect.height < SELECTION_THRESHOLD)) {
+          // Too small — treat as a click, let handleStageClick handle deselect
+          interactionStartedRef.current = false
+          return
+        }
+
+        // AABB intersection test
+        const objects = useBoardStore.getState().objects
+        const hits = objects.filter((obj) => {
+          return (
+            obj.x < rect.x + rect.width &&
+            obj.x + obj.width > rect.x &&
+            obj.y < rect.y + rect.height &&
+            obj.y + obj.height > rect.y
+          )
+        })
+        setSelectedIds(hits.map((o) => o.id))
+        // interactionStartedRef stays true until click fires
+      }
+    },
+    [selectionRect, setSelectedIds],
+  )
 
   function handleStageClick(e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
-    if (justFinishedDragRef.current) return
+    // Skip if this click is the tail end of a pan or selection drag
+    if (interactionStartedRef.current) {
+      interactionStartedRef.current = false
+      return
+    }
 
     const stage = e.target.getStage()
     const target = e.target
     const clickedOnEmpty =
       target === stage || (target.getParent() === stage && target.nodeType === 'Layer')
 
-    // Hand tool — don't create objects or deselect
     if (tool === 'hand') return
 
     if (CREATION_TOOLS.has(tool) && stage && (tool === 'text' || clickedOnEmpty)) {
@@ -326,27 +340,8 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
 
   function getCursorClass(): string {
     if (tool === 'hand' || isSpaceHeld) return 'cursor-grab'
-    if (isPanningRef.current) return 'cursor-grabbing'
     if (CREATION_TOOLS.has(tool)) return 'cursor-crosshair'
     return 'cursor-default'
-  }
-
-  function renderSelectionRect() {
-    if (!selectionRect) return null
-    return (
-      <Layer>
-        <Rect
-          x={selectionRect.x}
-          y={selectionRect.y}
-          width={selectionRect.width}
-          height={selectionRect.height}
-          fill="rgba(59, 130, 246, 0.1)"
-          stroke="#3b82f6"
-          strokeWidth={1}
-          dash={[6, 3]}
-        />
-      </Layer>
-    )
   }
 
   return (
@@ -373,8 +368,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
             stageY={stagePosition.y}
             scale={stageScale}
           />
-          <ObjectLayer />
-          {renderSelectionRect()}
+          <ObjectLayer selectionRect={selectionRect} />
           <CursorLayer />
         </Stage>
       )}

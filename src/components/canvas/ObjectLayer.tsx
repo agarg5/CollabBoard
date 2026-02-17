@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { Layer, Transformer } from 'react-konva'
+import { Layer, Rect, Transformer } from 'react-konva'
 import type Konva from 'konva'
 import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
@@ -8,6 +8,7 @@ import { StickyNote, MIN_WIDTH as STICKY_MIN_W, MIN_HEIGHT as STICKY_MIN_H } fro
 import { ShapeRect, MIN_WIDTH as RECT_MIN_W, MIN_HEIGHT as RECT_MIN_H } from './ShapeRect'
 import { ShapeCircle, MIN_WIDTH as CIRCLE_MIN_W, MIN_HEIGHT as CIRCLE_MIN_H } from './ShapeCircle'
 import { TextObject, MIN_WIDTH as TEXT_MIN_W, MIN_HEIGHT as TEXT_MIN_H } from './TextObject'
+import type { SelectionRect } from './BoardCanvas'
 
 const MIN_SIZES: Record<string, { width: number; height: number }> = {
   sticky_note: { width: STICKY_MIN_W, height: STICKY_MIN_H },
@@ -17,7 +18,11 @@ const MIN_SIZES: Record<string, { width: number; height: number }> = {
 }
 const DEFAULT_MIN = { width: 50, height: 50 }
 
-export function ObjectLayer() {
+interface ObjectLayerProps {
+  selectionRect: SelectionRect | null
+}
+
+export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
   const objects = useBoardStore((s) => s.objects)
   const selectedIds = useBoardStore((s) => s.selectedIds)
   const setSelectedIds = useBoardStore((s) => s.setSelectedIds)
@@ -210,6 +215,19 @@ export function ObjectLayer() {
         }
         return null
       })}
+      {selectionRect && (
+        <Rect
+          x={selectionRect.x}
+          y={selectionRect.y}
+          width={selectionRect.width}
+          height={selectionRect.height}
+          fill="rgba(59, 130, 246, 0.1)"
+          stroke="#3b82f6"
+          strokeWidth={1}
+          dash={[6, 3]}
+          listening={false}
+        />
+      )}
       <Transformer
         ref={transformerRef}
         keepRatio={false}
