@@ -26,6 +26,7 @@ function BoardView({ boardId }: { boardId: string }) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setBoardId(null)}
+            aria-label="Back to boards"
             className="px-3 py-1.5 text-sm cursor-pointer rounded hover:bg-gray-100 transition-colors"
           >
             &larr; Boards

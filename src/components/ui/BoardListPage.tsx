@@ -25,6 +25,8 @@ export function BoardListPage() {
     if (board) {
       setNewBoardName('')
       setShowCreateDialog(false)
+    } else {
+      window.alert('Failed to create board. Please try again.')
     }
   }
 
@@ -32,8 +34,11 @@ export function BoardListPage() {
     const confirmed = window.confirm(`Delete "${board.name}"? This cannot be undone.`)
     if (!confirmed) return
     setDeletingId(board.id)
-    await deleteBoard(board.id)
+    const success = await deleteBoard(board.id)
     setDeletingId(null)
+    if (!success) {
+      window.alert('Failed to delete board. Please try again.')
+    }
   }
 
   if (loading) return renderLoading()
