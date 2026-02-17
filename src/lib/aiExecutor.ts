@@ -2,6 +2,10 @@ import { useBoardStore } from '../store/boardStore'
 import { insertObject, patchObject, deleteObject } from './boardSync'
 import type { BoardObject, AIToolCall } from '../types/board'
 
+// TODO: DB sync calls (insertObject/patchObject/deleteObject) can reject but
+// we don't roll back the optimistic store update. Acceptable for MVP (last-write-wins)
+// but should add rollback or retry logic before scaling.
+
 interface ExecutionContext {
   boardId: string
   userId: string
@@ -10,6 +14,16 @@ interface ExecutionContext {
 interface ToolResult {
   id: string
   result: unknown
+}
+
+function requireArgs(
+  args: Record<string, unknown>,
+  required: Record<string, 'number' | 'string'>,
+): string | null {
+  for (const [key, type] of Object.entries(required)) {
+    if (typeof args[key] !== type) return `missing or invalid required arg: ${key}`
+  }
+  return null
 }
 
 function nextZIndex(): number {
@@ -35,6 +49,8 @@ type ToolHandler = (args: Record<string, unknown>, ctx: ExecutionContext) => Pro
 
 const toolHandlers: Record<string, ToolHandler> = {
   async createStickyNote(args, ctx) {
+    const err = requireArgs(args, { text: 'string', x: 'number', y: 'number' })
+    if (err) return { error: err }
     const obj = buildObject(
       {
         type: 'sticky_note',
@@ -55,6 +71,8 @@ const toolHandlers: Record<string, ToolHandler> = {
   },
 
   async createShape(args, ctx) {
+    const err = requireArgs(args, { shapeType: 'string', x: 'number', y: 'number' })
+    if (err) return { error: err }
     const shapeType = args.shapeType as 'rectangle' | 'circle'
     const obj = buildObject(
       {
@@ -76,6 +94,8 @@ const toolHandlers: Record<string, ToolHandler> = {
   },
 
   async createFrame(args, ctx) {
+    const err = requireArgs(args, { x: 'number', y: 'number' })
+    if (err) return { error: err }
     const obj = buildObject(
       {
         type: 'frame',
@@ -93,6 +113,8 @@ const toolHandlers: Record<string, ToolHandler> = {
   },
 
   async createConnector(args, ctx) {
+    const err = requireArgs(args, { fromX: 'number', fromY: 'number', toX: 'number', toY: 'number' })
+    if (err) return { error: err }
     const fromX = args.fromX as number
     const fromY = args.fromY as number
     const toX = args.toX as number
@@ -120,6 +142,8 @@ const toolHandlers: Record<string, ToolHandler> = {
   },
 
   async moveObject(args) {
+    const err = requireArgs(args, { objectId: 'string', x: 'number', y: 'number' })
+    if (err) return { error: err }
     const id = args.objectId as string
     const obj = useBoardStore.getState().objects.find((o) => o.id === id)
     if (!obj) return { error: 'Object not found' }
@@ -134,6 +158,8 @@ const toolHandlers: Record<string, ToolHandler> = {
   },
 
   async resizeObject(args) {
+    const err = requireArgs(args, { objectId: 'string', width: 'number', height: 'number' })
+    if (err) return { error: err }
     const id = args.objectId as string
     const obj = useBoardStore.getState().objects.find((o) => o.id === id)
     if (!obj) return { error: 'Object not found' }
@@ -148,6 +174,8 @@ const toolHandlers: Record<string, ToolHandler> = {
   },
 
   async updateText(args) {
+    const err = requireArgs(args, { objectId: 'string', text: 'string' })
+    if (err) return { error: err }
     const id = args.objectId as string
     const obj = useBoardStore.getState().objects.find((o) => o.id === id)
     if (!obj) return { error: 'Object not found' }
@@ -161,6 +189,8 @@ const toolHandlers: Record<string, ToolHandler> = {
   },
 
   async changeColor(args) {
+    const err = requireArgs(args, { objectId: 'string', color: 'string' })
+    if (err) return { error: err }
     const id = args.objectId as string
     const obj = useBoardStore.getState().objects.find((o) => o.id === id)
     if (!obj) return { error: 'Object not found' }
@@ -183,6 +213,8 @@ const toolHandlers: Record<string, ToolHandler> = {
   },
 
   async deleteObject(args) {
+    const err = requireArgs(args, { objectId: 'string' })
+    if (err) return { error: err }
     const id = args.objectId as string
     const obj = useBoardStore.getState().objects.find((o) => o.id === id)
     if (!obj) return { error: 'Object not found' }

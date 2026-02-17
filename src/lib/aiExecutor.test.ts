@@ -290,4 +290,30 @@ describe('aiExecutor', () => {
       )
     })
   })
+
+  describe('argument validation', () => {
+    it('returns error when required number arg is missing', async () => {
+      const tc = makeToolCall('createStickyNote', { text: 'Test' })
+      const result = await executeToolCall(tc, ctx)
+      expect((result.result as { error: string }).error).toBe('missing or invalid required arg: x')
+    })
+
+    it('returns error when required string arg is wrong type', async () => {
+      const tc = makeToolCall('createStickyNote', { text: 123, x: 0, y: 0 })
+      const result = await executeToolCall(tc, ctx)
+      expect((result.result as { error: string }).error).toBe('missing or invalid required arg: text')
+    })
+
+    it('returns error when moveObject missing objectId', async () => {
+      const tc = makeToolCall('moveObject', { x: 0, y: 0 })
+      const result = await executeToolCall(tc, ctx)
+      expect((result.result as { error: string }).error).toBe('missing or invalid required arg: objectId')
+    })
+
+    it('returns error when createConnector missing coords', async () => {
+      const tc = makeToolCall('createConnector', { fromX: 0, fromY: 0 })
+      const result = await executeToolCall(tc, ctx)
+      expect((result.result as { error: string }).error).toBe('missing or invalid required arg: toX')
+    })
+  })
 })
