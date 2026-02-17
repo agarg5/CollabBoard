@@ -16,43 +16,14 @@ interface InterpolatedCursor extends CursorPosition {
   displayY: number
 }
 
-export function CursorLayer() {
-  const cursors = usePresenceStore((s) => s.cursors)
-  const myId = useAuthStore((s) => s.user?.id)
-  const interpolatedRef = useRef<Record<string, InterpolatedCursor>>({})
-  const rafRef = useRef<number>(0)
-  const [, forceRender] = useState(0)
+function startLoop(
+  rafRef: React.MutableRefObject<number>,
+  interpolatedRef: React.MutableRefObject<Record<string, InterpolatedCursor>>,
+  forceRender: React.Dispatch<React.SetStateAction<number>>,
+) {
+  if (rafRef.current) return // already running
 
-  // Sync target positions from store into interpolated state
-  const prevCursorsRef = useRef(cursors)
-  if (cursors !== prevCursorsRef.current) {
-    prevCursorsRef.current = cursors
-    const interp = interpolatedRef.current
-    for (const [userId, cursor] of Object.entries(cursors)) {
-      if (userId === myId) continue
-      const existing = interp[userId]
-      if (existing) {
-        // Update target, keep current display position for lerp
-        existing.x = cursor.x
-        existing.y = cursor.y
-        existing.user_name = cursor.user_name
-        existing.color = cursor.color
-      } else {
-        // New cursor — snap to position immediately
-        interp[userId] = {
-          ...cursor,
-          displayX: cursor.x,
-          displayY: cursor.y,
-        }
-      }
-    }
-    // Remove cursors that left
-    for (const userId of Object.keys(interp)) {
-      if (!cursors[userId]) delete interp[userId]
-    }
-  }
-
-  const animate = useCallback(() => {
+  const animate = () => {
     const interp = interpolatedRef.current
     let needsUpdate = false
 
@@ -77,15 +48,61 @@ export function CursorLayer() {
 
     if (needsUpdate) {
       forceRender((n) => n + 1)
+      rafRef.current = requestAnimationFrame(animate)
+    } else {
+      rafRef.current = 0 // stop loop until new data arrives
+    }
+  }
+
+  rafRef.current = requestAnimationFrame(animate)
+}
+
+export function CursorLayer() {
+  const cursors = usePresenceStore((s) => s.cursors)
+  const myId = useAuthStore((s) => s.user?.id)
+  const interpolatedRef = useRef<Record<string, InterpolatedCursor>>({})
+  const rafRef = useRef<number>(0)
+  const [, forceRender] = useState(0)
+
+  // Sync target positions from store into interpolated state (in useEffect, not render)
+  useEffect(() => {
+    const interp = interpolatedRef.current
+
+    for (const [userId, cursor] of Object.entries(cursors)) {
+      if (userId === myId) continue
+      const existing = interp[userId]
+      if (existing) {
+        existing.x = cursor.x
+        existing.y = cursor.y
+        existing.user_name = cursor.user_name
+        existing.color = cursor.color
+      } else {
+        interp[userId] = {
+          ...cursor,
+          displayX: cursor.x,
+          displayY: cursor.y,
+        }
+      }
     }
 
-    rafRef.current = requestAnimationFrame(animate)
-  }, [])
+    // Remove cursors that left
+    for (const userId of Object.keys(interp)) {
+      if (!cursors[userId]) delete interp[userId]
+    }
 
+    // Kick off the animation loop (no-op if already running)
+    startLoop(rafRef, interpolatedRef, forceRender)
+  }, [cursors, myId])
+
+  // Cleanup rAF on unmount
   useEffect(() => {
-    rafRef.current = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [animate])
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = 0
+      }
+    }
+  }, [])
 
   const entries = Object.values(interpolatedRef.current)
 
