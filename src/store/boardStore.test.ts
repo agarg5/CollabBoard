@@ -52,4 +52,18 @@ describe('boardStore', () => {
     useBoardStore.getState().removeObject('a')
     expect(useBoardStore.getState().selectedIds).toHaveLength(0)
   })
+
+  it('deleteSelectedObjects removes objects and clears selection', () => {
+    useBoardStore.getState().addObject(makeObject({ id: 'a' }))
+    useBoardStore.getState().addObject(makeObject({ id: 'b' }))
+    useBoardStore.getState().addObject(makeObject({ id: 'c' }))
+    useBoardStore.getState().setSelectedIds(['a', 'c'])
+
+    const deleted = useBoardStore.getState().deleteSelectedObjects()
+
+    expect(deleted).toEqual(['a', 'c'])
+    expect(useBoardStore.getState().objects).toHaveLength(1)
+    expect(useBoardStore.getState().objects[0].id).toBe('b')
+    expect(useBoardStore.getState().selectedIds).toHaveLength(0)
+  })
 })
