@@ -5,6 +5,7 @@ import type { BoardObject } from '../../types/board'
 interface StickyNoteProps {
   obj: BoardObject
   isSelected: boolean
+  isEditing: boolean
   onSelect: (id: string) => void
   onDragEnd: (id: string, x: number, y: number) => void
   onTransformEnd: (id: string, attrs: { x: number; y: number; width: number; height: number }) => void
@@ -13,12 +14,15 @@ interface StickyNoteProps {
 
 const PADDING = 12
 const FONT_SIZE = 14
+const FONT_FAMILY = 'Arial'
+const LINE_HEIGHT = 1.2
 const MIN_WIDTH = 100
 const MIN_HEIGHT = 60
 
 export function StickyNote({
   obj,
   isSelected,
+  isEditing,
   onSelect,
   onDragEnd,
   onTransformEnd,
@@ -71,19 +75,23 @@ export function StickyNote({
         stroke={isSelected ? '#3b82f6' : undefined}
         strokeWidth={isSelected ? 2 : 0}
       />
-      <Text
-        width={obj.width}
-        height={obj.height}
-        text={text}
-        fontSize={FONT_SIZE}
-        padding={PADDING}
-        align="left"
-        verticalAlign="top"
-        wrap="word"
-        listening={false}
-      />
+      {!isEditing && (
+        <Text
+          width={obj.width}
+          height={obj.height}
+          text={text}
+          fontSize={FONT_SIZE}
+          fontFamily={FONT_FAMILY}
+          lineHeight={LINE_HEIGHT}
+          padding={PADDING}
+          align="left"
+          verticalAlign="top"
+          wrap="word"
+          listening={false}
+        />
+      )}
     </Group>
   )
 }
 
-export { PADDING, FONT_SIZE, MIN_WIDTH, MIN_HEIGHT }
+export { PADDING, FONT_SIZE, FONT_FAMILY, LINE_HEIGHT, MIN_WIDTH, MIN_HEIGHT }

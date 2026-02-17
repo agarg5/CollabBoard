@@ -18,6 +18,7 @@ export function ObjectLayer() {
   const selectedIds = useBoardStore((s) => s.selectedIds)
   const setSelectedIds = useBoardStore((s) => s.setSelectedIds)
   const updateObject = useBoardStore((s) => s.updateObject)
+  const editingId = useUiStore((s) => s.editingId)
   const setEditingId = useUiStore((s) => s.setEditingId)
 
   const transformerRef = useRef<Konva.Transformer>(null)
@@ -68,6 +69,7 @@ export function ObjectLayer() {
               key={obj.id}
               obj={obj}
               isSelected={isSelected}
+              isEditing={editingId === obj.id}
               onSelect={handleSelect}
               onDragEnd={handleDragEnd}
               onTransformEnd={handleTransformEnd}
