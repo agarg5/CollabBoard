@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useAuthStore } from './store/authStore'
 import { LoginPage } from './components/auth/LoginPage'
 import { BoardCanvas } from './components/canvas/BoardCanvas'
+import { Toolbar } from './components/ui/Toolbar'
 import './App.css'
 
 function App() {
@@ -39,6 +40,7 @@ function App() {
             </button>
           </div>
         </div>
+        <Toolbar />
         <BoardCanvas />
       </div>
     )
