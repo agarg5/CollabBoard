@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
 import { patchObject } from '../../lib/boardSync'
-import { PADDING, FONT_SIZE } from './StickyNote'
+import { PADDING, FONT_SIZE, FONT_FAMILY, LINE_HEIGHT } from './StickyNote'
 
 export function TextEditor() {
   const editingId = useUiStore((s) => s.editingId)
@@ -57,8 +57,8 @@ export function TextEditor() {
         width: width - scaledPadding * 2,
         height: height - scaledPadding * 2,
         fontSize: scaledFontSize,
-        lineHeight: '1.2',
-        fontFamily: 'Arial',
+        lineHeight: `${LINE_HEIGHT}`,
+        fontFamily: FONT_FAMILY,
       }}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}

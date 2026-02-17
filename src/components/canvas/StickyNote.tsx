@@ -14,6 +14,8 @@ interface StickyNoteProps {
 
 const PADDING = 12
 const FONT_SIZE = 14
+const FONT_FAMILY = 'Arial'
+const LINE_HEIGHT = 1.2
 const MIN_WIDTH = 100
 const MIN_HEIGHT = 60
 
@@ -79,6 +81,8 @@ export function StickyNote({
           height={obj.height}
           text={text}
           fontSize={FONT_SIZE}
+          fontFamily={FONT_FAMILY}
+          lineHeight={LINE_HEIGHT}
           padding={PADDING}
           align="left"
           verticalAlign="top"
@@ -90,4 +94,4 @@ export function StickyNote({
   )
 }
 
-export { PADDING, FONT_SIZE, MIN_WIDTH, MIN_HEIGHT }
+export { PADDING, FONT_SIZE, FONT_FAMILY, LINE_HEIGHT, MIN_WIDTH, MIN_HEIGHT }
