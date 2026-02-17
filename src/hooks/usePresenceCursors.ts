@@ -3,72 +3,34 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { useAuthStore } from '../store/authStore'
 import { usePresenceStore } from '../store/presenceStore'
 import { getCursorColor } from '../lib/cursorColors'
-import type { CursorPosition, PresenceUser } from '../types/board'
+import type { CursorPosition } from '../types/board'
 
 const THROTTLE_MS = 50
+const CURSOR_STALE_MS = 10_000
 
-export function usePresenceCursors(
-  channelRef: React.RefObject<RealtimeChannel | null>,
-) {
+/**
+ * Provides broadcastCursor() for sending local cursor position.
+ * All channel listeners (broadcast receive, presence sync/leave) are
+ * registered in useBoardChannel before subscribe — this hook only
+ * handles sending and staleness cleanup.
+ */
+export function usePresenceCursors(channel: RealtimeChannel | null) {
   const lastSentRef = useRef(0)
 
+  // Cursor staleness cleanup: remove cursors not updated in CURSOR_STALE_MS
   useEffect(() => {
-    const channel = channelRef.current
-    if (!channel) return
-
-    const myId = useAuthStore.getState().user?.id
-
-    // --- Broadcast: receive remote cursors ---
-    channel.on('broadcast', { event: 'cursor' }, ({ payload }) => {
-      const cursor = payload as CursorPosition
-      const currentMyId = useAuthStore.getState().user?.id
-      if (cursor.user_id === currentMyId) return
-      usePresenceStore.getState().setCursor(cursor.user_id, cursor)
-    })
-
-    // --- Presence: track who's online ---
-    channel.on('presence', { event: 'sync' }, () => {
-      const state = channel.presenceState<{
-        user_id: string
-        user_name: string
-        color: string
-        online_at: string
-      }>()
-      const users: PresenceUser[] = Object.values(state).flatMap((presences) =>
-        presences.map((p) => ({
-          user_id: p.user_id,
-          user_name: p.user_name,
-          color: p.color,
-          online_at: p.online_at,
-        })),
-      )
-      usePresenceStore.getState().setOnlineUsers(users)
-    })
-
-    channel.on('presence', { event: 'leave' }, ({ leftPresences }) => {
-      for (const p of leftPresences) {
-        const data = p as unknown as { user_id: string }
-        usePresenceStore.getState().removeCursor(data.user_id)
+    const interval = setInterval(() => {
+      const { cursors, removeCursor } = usePresenceStore.getState()
+      const now = Date.now()
+      for (const [userId, cursor] of Object.entries(cursors)) {
+        if (cursor._lastSeen && now - cursor._lastSeen > CURSOR_STALE_MS) {
+          removeCursor(userId)
+        }
       }
-    })
+    }, CURSOR_STALE_MS)
 
-    // Track own presence
-    const user = useAuthStore.getState().user
-    if (user) {
-      const name =
-        user.user_metadata?.full_name || user.email || 'Anonymous'
-      channel.track({
-        user_id: user.id,
-        user_name: name,
-        color: getCursorColor(user.id),
-        online_at: new Date().toISOString(),
-      })
-    }
-
-    return () => {
-      if (myId) usePresenceStore.getState().removeCursor(myId)
-    }
-  }, [channelRef])
+    return () => clearInterval(interval)
+  }, [])
 
   const broadcastCursor = useCallback(
     (worldX: number, worldY: number) => {
@@ -76,7 +38,6 @@ export function usePresenceCursors(
       if (now - lastSentRef.current < THROTTLE_MS) return
       lastSentRef.current = now
 
-      const channel = channelRef.current
       if (!channel) return
 
       const user = useAuthStore.getState().user
@@ -99,7 +60,7 @@ export function usePresenceCursors(
         payload: cursor,
       })
     },
-    [channelRef],
+    [channel],
   )
 
   return { broadcastCursor }

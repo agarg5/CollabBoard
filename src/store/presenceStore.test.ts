@@ -43,4 +43,10 @@ describe('presenceStore', () => {
     usePresenceStore.getState().setCursor('u1', { ...cursor, x: 300 })
     expect(usePresenceStore.getState().cursors['u1'].x).toBe(300)
   })
+
+  it('setCursor preserves _lastSeen when provided', () => {
+    const ts = Date.now()
+    usePresenceStore.getState().setCursor('u1', { ...cursor, _lastSeen: ts })
+    expect(usePresenceStore.getState().cursors['u1']._lastSeen).toBe(ts)
+  })
 })

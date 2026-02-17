@@ -14,9 +14,9 @@ function BoardView() {
   const { user, signOut } = useAuthStore()
   const boardId = useBoardStore((s) => s.boardId)
 
-  const channelRef = useBoardChannel(boardId)
+  const channel = useBoardChannel(boardId)
   useRealtimeSync(boardId)
-  const { broadcastCursor } = usePresenceCursors(channelRef)
+  const { broadcastCursor } = usePresenceCursors(channel)
 
   return (
     <div className="flex flex-col w-screen h-screen">

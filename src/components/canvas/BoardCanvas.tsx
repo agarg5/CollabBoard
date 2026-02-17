@@ -13,7 +13,7 @@ import { insertObject } from '../../lib/boardSync'
 import type { BoardObject } from '../../types/board'
 
 interface BoardCanvasProps {
-  broadcastCursor?: (worldX: number, worldY: number) => void
+  broadcastCursor: (worldX: number, worldY: number) => void
 }
 
 export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
@@ -74,7 +74,6 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
 
   const handleMouseMove = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
-      if (!broadcastCursor) return
       const stage = e.target.getStage()
       if (!stage) return
       const pointer = stage.getPointerPosition()
