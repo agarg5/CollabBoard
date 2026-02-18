@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { Layer, Line, Rect, Text, Group } from 'react-konva'
 import { usePresenceStore } from '../../store/presenceStore'
 import { useAuthStore } from '../../store/authStore'

@@ -10,6 +10,7 @@ import { BoardListPage } from './components/ui/BoardListPage'
 import { Toolbar } from './components/ui/Toolbar'
 import { PresencePanel } from './components/ui/PresencePanel'
 import { ConnectionStatus } from './components/ui/ConnectionStatus'
+import { AiChatPanel } from './components/ui/AiChatPanel'
 import './App.css'
 
 function BoardView({ boardId }: { boardId: string }) {
@@ -46,7 +47,10 @@ function BoardView({ boardId }: { boardId: string }) {
         </div>
       </div>
       <Toolbar />
-      <BoardCanvas broadcastCursor={broadcastCursor} />
+      <div className="relative flex-1 overflow-hidden">
+        <BoardCanvas broadcastCursor={broadcastCursor} />
+        <AiChatPanel boardId={boardId} />
+      </div>
     </div>
   )
 }

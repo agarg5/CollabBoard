@@ -44,3 +44,18 @@ export interface PresenceUser {
   color: string
   online_at: string
 }
+
+export interface AiToolCall {
+  id: string
+  function: { name: string; arguments: string }
+}
+
+export interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  toolCalls?: AiToolCall[]
+  timestamp: string
+  status: 'sending' | 'done' | 'error'
+  error?: string
+}
