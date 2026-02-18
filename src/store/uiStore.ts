@@ -6,7 +6,7 @@ export interface ChatMessage {
 }
 
 interface UiState {
-  tool: 'select' | 'hand' | 'sticky_note' | 'rectangle' | 'circle' | 'line' | 'text' | 'connector'
+  tool: 'select' | 'hand' | 'sticky_note' | 'rectangle' | 'circle' | 'line' | 'text' | 'connector' | 'frame'
   stagePosition: { x: number; y: number }
   stageScale: number
   editingId: string | null
