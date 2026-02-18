@@ -8,7 +8,9 @@ interface OpenAIResponse {
 
 interface ChatMessage {
   role: string
-  content: string
+  content?: string | null
+  tool_calls?: unknown[]
+  tool_call_id?: string
 }
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
@@ -22,6 +24,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-dev-bypass',
 }
 
+const MAX_TOOL_ITERATIONS = 5
+
 const SYSTEM_PROMPT = `You are an AI assistant for CollabBoard, a collaborative whiteboard app.
 You help users create and manipulate objects on the board using the provided tool functions.
 
@@ -32,10 +36,16 @@ Rules:
 - Sticky note default size is 200x200. Shape default size is 150x100.
 - Available sticky note colors: #fef08a (yellow), #fda4af (pink), #93c5fd (blue), #86efac (green), #c4b5fd (purple), #fed7aa (orange).
 
+Multi-step guidance:
+- When asked to rearrange, organize, or lay out existing objects, FIRST call getBoardState to see what exists, THEN plan and execute your actions.
+- When asked to "arrange in a grid", calculate positions based on object count. Use ~240px column spacing and ~240px row spacing.
+- When asked to "space evenly", compute total span and divide equally.
+- You can reference objects created in earlier tool calls by their returned IDs.
+
 Template guidance:
-- SWOT analysis: Create 4 sticky notes in a 2x2 grid. Strengths (#86efac) top-left, Weaknesses (#fda4af) top-right, Opportunities (#93c5fd) bottom-left, Threats (#c4b5fd) bottom-right. Each 220x200, 240px apart. Title each note with the category name and brief placeholder text.
-- User journey map: Create a horizontal row of 5 sticky notes representing stages (Awareness, Consideration, Decision, Onboarding, Retention). Alternate colors, 240px apart horizontally at same y.
-- Retrospective board: Create 3 column headers as sticky notes: "What Went Well" (#86efac), "What To Improve" (#fda4af), "Action Items" (#93c5fd). Space 260px apart. Add 2-3 blank sticky notes below each header for team members to fill in.
+- SWOT analysis: First create a frame labeled "SWOT Analysis" (x=60, y=30, width=540, height=510). Then create 4 sticky notes inside: Strengths (#86efac) at (80,70), Weaknesses (#fda4af) at (310,70), Opportunities (#93c5fd) at (80,300), Threats (#c4b5fd) at (310,300). Each 220x200. Title each note with the category name and brief placeholder text.
+- User journey map: First create a frame labeled "User Journey" (x=60, y=30, width=1260, height=280). Then create 5 sticky notes inside at y=70: Awareness (#fef08a) at (80,70), Consideration (#93c5fd) at (320,70), Decision (#86efac) at (560,70), Onboarding (#fed7aa) at (800,70), Retention (#c4b5fd) at (1040,70). Each 200x200.
+- Retrospective board: Create 3 frames side by side: "What Went Well" (x=60, y=30, w=280, h=520), "What To Improve" (x=360, y=30, w=280, h=520), "Action Items" (x=660, y=30, w=280, h=520). Inside each frame, create a header sticky note and 2-3 blank sticky notes below. Use #86efac for well, #fda4af for improve, #93c5fd for actions.
 - Pros and cons: Create two columns of sticky notes. "Pros" (#86efac) on the left, "Cons" (#fda4af) on the right.
 - Kanban board: Create columns "To Do", "In Progress", "Done" as headers with empty cards below each.`
 
@@ -302,37 +312,109 @@ Deno.serve(async (req) => {
       ? `Current board has ${boardState.length} objects:\n${JSON.stringify(boardState)}`
       : 'The board is currently empty.'
 
-  const messages = [
+  const messages: ChatMessage[] = [
     { role: 'system', content: SYSTEM_PROMPT },
     { role: 'system', content: boardContext },
     ...(messageHistory ?? []),
     { role: 'user', content: prompt },
   ]
 
-  let data: OpenAIResponse
-  try {
-    data = await callOpenAI({ messages, tools: TOOLS })
-  } catch (err) {
-    console.error('OpenAI API error:', err)
-    return new Response(JSON.stringify({ error: 'AI request failed' }), {
-      status: 502,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+  // Track all tool calls and simulated results across iterations
+  const allToolCalls: Array<{ id: string; type: string; function: { name: string; arguments: string } }> = []
+  const allSimulatedResults: string[] = []
+  // Track objects "created" during simulation so getBoardState can include them
+  const simulatedObjects: unknown[] = []
+  let fakeIdCounter = 0
+
+  function simulateToolResult(
+    toolCall: { id: string; function: { name: string; arguments: string } },
+  ): string {
+    const name = toolCall.function.name
+    let args: Record<string, unknown> = {}
+    try { args = JSON.parse(toolCall.function.arguments) } catch { /* use empty */ }
+
+    if (name === 'getBoardState') {
+      const combined = [...(boardState ?? []), ...simulatedObjects]
+      return JSON.stringify(combined)
+    }
+
+    if (name.startsWith('create')) {
+      const fakeId = `__simulated_${fakeIdCounter++}`
+      const typeMap: Record<string, string> = {
+        createStickyNote: 'sticky_note',
+        createShape: (args.shapeType as string) ?? 'rectangle',
+        createFrame: 'frame',
+        createConnector: 'connector',
+      }
+      simulatedObjects.push({ id: fakeId, type: typeMap[name] ?? name.replace('create', '').toLowerCase(), ...args })
+      return JSON.stringify({ created: fakeId })
+    }
+
+    // Manipulation tools
+    return JSON.stringify({ success: true })
   }
 
-  const choice = data.choices?.[0]
+  let finalMessage: string | null = null
 
-  if (!choice) {
-    return new Response(JSON.stringify({ error: 'No response from AI' }), {
-      status: 502,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+  for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+    let data: OpenAIResponse
+    try {
+      data = await callOpenAI({ messages, tools: TOOLS })
+    } catch (err) {
+      console.error('OpenAI API error:', err)
+      return new Response(JSON.stringify({ error: 'AI request failed' }), {
+        status: 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const choice = data.choices?.[0]
+
+    if (!choice) {
+      return new Response(JSON.stringify({ error: 'No response from AI' }), {
+        status: 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const assistantMessage = choice.message
+    messages.push(assistantMessage)
+
+    const toolCalls = assistantMessage.tool_calls as
+      | Array<{ id: string; type: string; function: { name: string; arguments: string } }>
+      | undefined
+
+    // No tool calls = final text response, we're done
+    if (!toolCalls || toolCalls.length === 0) {
+      finalMessage = assistantMessage.content
+      break
+    }
+
+    // Process tool calls: collect them and simulate results
+    for (const tc of toolCalls) {
+      allToolCalls.push(tc)
+      const simResult = simulateToolResult(tc)
+      allSimulatedResults.push(simResult)
+
+      // Feed simulated result back as tool message for next iteration
+      messages.push({
+        role: 'tool',
+        tool_call_id: tc.id,
+        content: simResult,
+      })
+    }
+  }
+
+  // If we exhausted iterations without a final text response, use the last content or a default
+  if (finalMessage === null) {
+    finalMessage = 'Done! I executed the requested actions on the board.'
   }
 
   return new Response(
     JSON.stringify({
-      message: choice.message.content,
-      toolCalls: choice.message.tool_calls ?? [],
+      message: finalMessage,
+      toolCalls: allToolCalls,
+      simulatedResults: allSimulatedResults,
     }),
     {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

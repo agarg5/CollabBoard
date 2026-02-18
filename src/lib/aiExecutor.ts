@@ -253,3 +253,73 @@ export async function executeToolCall(
   const result = await handler(args, context)
   return { id: toolCall.id, result }
 }
+
+// Fields in tool call arguments that hold object IDs and should be remapped
+const ID_FIELDS = ['objectId', 'targetId', 'fromId', 'toId']
+
+/**
+ * Execute an array of tool calls with ID remapping.
+ * When the edge function simulates multi-step tool calls, creation tools return
+ * fake IDs (e.g. __simulated_0). This function maps those fake IDs to real UUIDs
+ * as objects are created, so subsequent tool calls referencing them work correctly.
+ *
+ * IMPORTANT: simulatedResults[i] corresponds positionally to toolCalls[i] (1:1).
+ * Both arrays include entries for getBoardState calls (which are skipped during
+ * execution but still occupy their index slot).
+ */
+export async function executeToolCalls(
+  toolCalls: AIToolCall[],
+  simulatedResults: string[],
+  context: ExecutionContext,
+): Promise<string[]> {
+  const idMap = new Map<string, string>()
+  const errors: string[] = []
+
+  for (let i = 0; i < toolCalls.length; i++) {
+    const tc = toolCalls[i]
+
+    // Skip getBoardState calls — they were only needed server-side for planning
+    if (tc.function.name === 'getBoardState') continue
+
+    // Remap any fake IDs in known ID fields to real ones
+    let rawArgs = tc.function.arguments
+    if (idMap.size > 0) {
+      try {
+        const parsed = JSON.parse(rawArgs) as Record<string, unknown>
+        for (const field of ID_FIELDS) {
+          const val = parsed[field]
+          if (typeof val === 'string' && idMap.has(val)) {
+            parsed[field] = idMap.get(val)
+          }
+        }
+        rawArgs = JSON.stringify(parsed)
+      } catch { console.warn('Failed to parse tool call arguments for ID remapping:', rawArgs) }
+    }
+    const remappedTc: AIToolCall = { ...tc, function: { ...tc.function, arguments: rawArgs } }
+
+    try {
+      const result = await executeToolCall(remappedTc, context)
+
+      // If this was a creation tool, map the simulated ID to the real one
+      const simResult = simulatedResults[i]
+      if (simResult && result.result && typeof result.result === 'object' && 'created' in result.result) {
+        try {
+          const sim = JSON.parse(simResult) as { created?: string }
+          if (sim.created) {
+            idMap.set(sim.created, (result.result as { created: string }).created)
+          }
+        } catch {
+          console.warn('Failed to parse simulated result:', simResult)
+        }
+      }
+
+      if (result.result && typeof result.result === 'object' && 'error' in result.result) {
+        errors.push(`${tc.function.name}: ${(result.result as { error: string }).error}`)
+      }
+    } catch (err) {
+      errors.push(`${tc.function.name}: ${err instanceof Error ? err.message : 'execution failed'}`)
+    }
+  }
+
+  return errors
+}

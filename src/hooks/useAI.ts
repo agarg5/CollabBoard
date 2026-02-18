@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useBoardStore } from '../store/boardStore'
-import { executeToolCall } from '../lib/aiExecutor'
+import { executeToolCalls } from '../lib/aiExecutor'
 import type { AIResponse } from '../types/board'
 
 const AI_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-agent`
@@ -67,20 +67,11 @@ export function useAI() {
 
       const data = (await res.json()) as AIResponse
 
-      const errors: string[] = []
-      for (const toolCall of data.toolCalls) {
-        try {
-          const result = await executeToolCall(toolCall, {
-            boardId,
-            userId,
-          })
-          if (result.result && typeof result.result === 'object' && 'error' in result.result) {
-            errors.push(`${toolCall.function.name}: ${(result.result as { error: string }).error}`)
-          }
-        } catch (err) {
-          errors.push(`${toolCall.function.name}: ${err instanceof Error ? err.message : 'execution failed'}`)
-        }
-      }
+      const errors = await executeToolCalls(
+        data.toolCalls,
+        data.simulatedResults ?? [],
+        { boardId, userId },
+      )
 
       if (errors.length > 0) {
         setError(`Some actions failed: ${errors.join('; ')}`)
