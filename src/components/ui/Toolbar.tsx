@@ -20,8 +20,9 @@ const SHAPE_COLORS = [
   { name: 'Gray', value: '#6b7280' },
 ]
 
-const SHAPE_TYPES = new Set(['rectangle', 'circle'])
-const STROKE_ONLY_TYPES = new Set(['connector'])
+const STROKE_ONLY_TYPES = new Set(['line', 'connector'])
+const FILLED_SHAPE_TYPES = new Set(['rectangle', 'circle'])
+
 
 function getMultiSelectColorInfo(selectedIds: string[], objects: BoardObject[]) {
   if (selectedIds.length === 0) return null
@@ -36,13 +37,13 @@ function getMultiSelectColorInfo(selectedIds: string[], objects: BoardObject[]) 
     return { palette: STICKY_COLORS, colorKey: 'color' as const, isShape: false, isStrokeOnly: false }
   }
 
-  // All stroke-only types (connector)
+  // All stroke-only types (line, connector)
   if ([...types].every((t) => STROKE_ONLY_TYPES.has(t))) {
     return { palette: SHAPE_COLORS, colorKey: 'strokeColor' as const, isShape: true, isStrokeOnly: true }
   }
 
   // All filled shapes (rectangle/circle)
-  if ([...types].every((t) => SHAPE_TYPES.has(t))) {
+  if ([...types].every((t) => FILLED_SHAPE_TYPES.has(t))) {
     return { palette: SHAPE_COLORS, colorKey: 'fillColor' as const, isShape: true, isStrokeOnly: false }
   }
 
@@ -220,6 +221,31 @@ export function Toolbar() {
           />
         </svg>
         Circle
+      </button>
+      <button
+        onClick={() => setTool('line')}
+        className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
+          tool === 'line' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+        }`}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          className="inline-block mr-1 -mt-0.5"
+        >
+          <line
+            x1="2"
+            y1="14"
+            x2="14"
+            y2="2"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+        Line
       </button>
       <button
         onClick={() => setTool('connector')}

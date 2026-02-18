@@ -13,7 +13,7 @@ import { calculateZoom } from './zoomHelper'
 import { insertObject, deleteObject } from '../../lib/boardSync'
 import type { BoardObject, ObjectType } from '../../types/board'
 
-const CREATION_TOOLS: Set<string> = new Set(['sticky_note', 'rectangle', 'circle', 'text'])
+const CREATION_TOOLS: Set<string> = new Set(['sticky_note', 'rectangle', 'circle', 'line', 'text'])
 const SELECTION_THRESHOLD = 5
 
 interface BoardCanvasProps {
@@ -475,6 +475,10 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
         width = 120
         height = 120
         properties = { fillColor: '#ec4899', strokeColor: '#1e293b', strokeWidth: 2 }
+      } else if (tool === 'line') {
+        width = 150
+        height = 2
+        properties = { strokeColor: '#3b82f6', strokeWidth: 2 }
       } else if (tool === 'text') {
         width = 200
         height = 32

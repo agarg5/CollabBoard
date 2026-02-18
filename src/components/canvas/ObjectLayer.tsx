@@ -8,6 +8,7 @@ import { StickyNote, MIN_WIDTH as STICKY_MIN_W, MIN_HEIGHT as STICKY_MIN_H } fro
 import { ShapeRect, MIN_WIDTH as RECT_MIN_W, MIN_HEIGHT as RECT_MIN_H } from './ShapeRect'
 import { ShapeCircle, MIN_WIDTH as CIRCLE_MIN_W, MIN_HEIGHT as CIRCLE_MIN_H } from './ShapeCircle'
 import { TextObject, MIN_WIDTH as TEXT_MIN_W, MIN_HEIGHT as TEXT_MIN_H } from './TextObject'
+import { ShapeLine, MIN_WIDTH as LINE_MIN_W, MIN_HEIGHT as LINE_MIN_H } from './ShapeLine'
 import { Connector, MIN_WIDTH as CONN_MIN_W, MIN_HEIGHT as CONN_MIN_H } from './Connector'
 import type { SelectionRect } from './BoardCanvas'
 
@@ -16,6 +17,7 @@ const MIN_SIZES: Record<string, { width: number; height: number }> = {
   rectangle: { width: RECT_MIN_W, height: RECT_MIN_H },
   circle: { width: CIRCLE_MIN_W, height: CIRCLE_MIN_H },
   text: { width: TEXT_MIN_W, height: TEXT_MIN_H },
+  line: { width: LINE_MIN_W, height: LINE_MIN_H },
   connector: { width: CONN_MIN_W, height: CONN_MIN_H },
 }
 const DEFAULT_MIN = { width: 50, height: 50 }
@@ -94,10 +96,65 @@ export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
     transformerRef.current?.moveToTop()
   }
 
+  /** Visually reposition connector Konva nodes during drag (no store/DB writes). */
+  function updateConnectorEndpointsVisual(movedId: string, liveX: number, liveY: number) {
+    const layer = layerRef.current
+    if (!layer) return
+    const { objects: allObjects } = useBoardStore.getState()
+    const movedObj = allObjects.find((o) => o.id === movedId)
+    if (!movedObj) return
+
+    for (const conn of allObjects) {
+      if (conn.type !== 'connector') continue
+      const startId = conn.properties.startObjectId as string | undefined
+      const endId = conn.properties.endObjectId as string | undefined
+      if (startId !== movedId && endId !== movedId) continue
+
+      const startObj = startId ? allObjects.find((o) => o.id === startId) : null
+      const endObj = endId ? allObjects.find((o) => o.id === endId) : null
+
+      let sx = conn.x
+      let sy = conn.y
+      if (startObj) {
+        if (startObj.id === movedId) {
+          sx = liveX + movedObj.width / 2
+          sy = liveY + movedObj.height / 2
+        } else {
+          sx = startObj.x + startObj.width / 2
+          sy = startObj.y + startObj.height / 2
+        }
+      }
+
+      let ex = conn.x + conn.width
+      let ey = conn.y + conn.height
+      if (endObj) {
+        if (endObj.id === movedId) {
+          ex = liveX + movedObj.width / 2
+          ey = liveY + movedObj.height / 2
+        } else {
+          ex = endObj.x + endObj.width / 2
+          ey = endObj.y + endObj.height / 2
+        }
+      }
+
+      const connNode = layer.findOne(`#${conn.id}`)
+      if (connNode) {
+        connNode.x(sx)
+        connNode.y(sy)
+        connNode.width(ex - sx)
+        connNode.height(ey - sy)
+      }
+    }
+  }
+
   function handleDragMove(e: Konva.KonvaEventObject<DragEvent>) {
     const draggedId = e.target.id()
     const startPos = dragStartPositions.current.get(draggedId)
-    if (!startPos || dragStartPositions.current.size <= 1) return
+    if (!startPos || dragStartPositions.current.size <= 1) {
+      // Single object drag — update connectors visually
+      updateConnectorEndpointsVisual(draggedId, e.target.x(), e.target.y())
+      return
+    }
 
     const dx = e.target.x() - startPos.x
     const dy = e.target.y() - startPos.y
@@ -112,6 +169,13 @@ export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
         node.x(pos.x + dx)
         node.y(pos.y + dy)
       }
+    }
+
+    // Update connectors visually for all dragged objects
+    for (const [id, pos] of dragStartPositions.current) {
+      const liveX = id === draggedId ? e.target.x() : pos.x + dx
+      const liveY = id === draggedId ? e.target.y() : pos.y + dy
+      updateConnectorEndpointsVisual(id, liveX, liveY)
     }
   }
 
@@ -238,6 +302,19 @@ export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
         if (obj.type === 'circle') {
           return (
             <ShapeCircle
+              key={obj.id}
+              obj={obj}
+              onSelect={handleSelect}
+              onDragStart={handleDragStart}
+              onDragMove={handleDragMove}
+              onDragEnd={handleDragEnd}
+              onTransformEnd={handleTransformEnd}
+            />
+          )
+        }
+        if (obj.type === 'line') {
+          return (
+            <ShapeLine
               key={obj.id}
               obj={obj}
               onSelect={handleSelect}
