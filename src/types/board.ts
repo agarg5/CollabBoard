@@ -17,6 +17,7 @@ export interface BoardObject {
   width: number
   height: number
   z_index: number
+  rotation: number
   created_by: string | null
   updated_at: string
 }

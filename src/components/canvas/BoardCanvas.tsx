@@ -443,6 +443,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
         width: endX - start.x,
         height: endY - start.y,
         z_index: objects.reduce((max, o) => Math.max(max, o.z_index), 0) + 1,
+        rotation: 0,
         created_by: userId,
         updated_at: new Date().toISOString(),
       }
@@ -501,6 +502,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
         width,
         height,
         z_index: objects.reduce((max, o) => Math.max(max, o.z_index), 0) + 1,
+        rotation: 0,
         created_by: userId,
         updated_at: new Date().toISOString(),
       }
