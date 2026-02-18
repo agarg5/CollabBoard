@@ -179,6 +179,7 @@ export function BoardListPage() {
     return (
       <div
         key={board.id}
+        data-testid="board-card"
         onClick={() => !isDeleting && setBoardId(board.id)}
         className={`group relative p-5 bg-white rounded-lg border border-gray-200 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 ${
           isDeleting ? 'opacity-50 pointer-events-none' : ''
