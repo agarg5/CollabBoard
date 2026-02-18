@@ -54,4 +54,5 @@ export interface AIToolCall {
 export interface AIResponse {
   message: string
   toolCalls: AIToolCall[]
+  simulatedResults?: string[]
 }

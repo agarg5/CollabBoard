@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useBoardStore } from '../store/boardStore'
-import { executeToolCall } from './aiExecutor'
+import { executeToolCall, executeToolCalls } from './aiExecutor'
 import type { AIToolCall, BoardObject } from '../types/board'
 
 vi.mock('./boardSync', () => ({
@@ -324,5 +324,111 @@ describe('aiExecutor', () => {
       const result = await executeToolCall(tc, ctx)
       expect((result.result as { error: string }).error).toBe('missing or invalid required arg: toX')
     })
+  })
+})
+
+describe('executeToolCalls', () => {
+  beforeEach(() => {
+    useBoardStore.setState({ boardId: 'board-1', objects: [], selectedIds: [] })
+  })
+
+  it('executes single-step tool calls without remapping', async () => {
+    const toolCalls = [
+      makeToolCall('createStickyNote', { text: 'A', x: 100, y: 100 }),
+      makeToolCall('createStickyNote', { text: 'B', x: 300, y: 100 }),
+    ]
+    const simulatedResults = [
+      JSON.stringify({ created: '__simulated_0' }),
+      JSON.stringify({ created: '__simulated_1' }),
+    ]
+
+    const errors = await executeToolCalls(toolCalls, simulatedResults, ctx)
+
+    expect(errors).toHaveLength(0)
+    expect(useBoardStore.getState().objects).toHaveLength(2)
+  })
+
+  it('remaps fake IDs from creation to subsequent manipulation', async () => {
+    const toolCalls = [
+      makeToolCall('createStickyNote', { text: 'Note', x: 100, y: 100 }),
+      { id: 'call_move', type: 'function' as const, function: { name: 'moveObject', arguments: JSON.stringify({ objectId: '__simulated_0', x: 500, y: 500 }) } },
+    ]
+    const simulatedResults = [
+      JSON.stringify({ created: '__simulated_0' }),
+      JSON.stringify({ success: true }),
+    ]
+
+    const errors = await executeToolCalls(toolCalls, simulatedResults, ctx)
+
+    expect(errors).toHaveLength(0)
+    const objects = useBoardStore.getState().objects
+    expect(objects).toHaveLength(1)
+    expect(objects[0].x).toBe(500)
+    expect(objects[0].y).toBe(500)
+  })
+
+  it('remaps multiple fake IDs across several creations and manipulations', async () => {
+    const toolCalls = [
+      makeToolCall('createStickyNote', { text: 'First', x: 100, y: 100 }),
+      makeToolCall('createStickyNote', { text: 'Second', x: 300, y: 100 }),
+      { id: 'call_move_1', type: 'function' as const, function: { name: 'moveObject', arguments: JSON.stringify({ objectId: '__simulated_0', x: 0, y: 0 }) } },
+      { id: 'call_move_2', type: 'function' as const, function: { name: 'moveObject', arguments: JSON.stringify({ objectId: '__simulated_1', x: 50, y: 50 }) } },
+    ]
+    const simulatedResults = [
+      JSON.stringify({ created: '__simulated_0' }),
+      JSON.stringify({ created: '__simulated_1' }),
+      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true }),
+    ]
+
+    const errors = await executeToolCalls(toolCalls, simulatedResults, ctx)
+
+    expect(errors).toHaveLength(0)
+    const objects = useBoardStore.getState().objects
+    expect(objects).toHaveLength(2)
+    expect(objects[0].x).toBe(0)
+    expect(objects[0].y).toBe(0)
+    expect(objects[1].x).toBe(50)
+    expect(objects[1].y).toBe(50)
+  })
+
+  it('skips getBoardState calls during client execution', async () => {
+    const toolCalls = [
+      makeToolCall('getBoardState', {}),
+      makeToolCall('createStickyNote', { text: 'After inspect', x: 100, y: 100 }),
+    ]
+    const simulatedResults = [
+      JSON.stringify([]),
+      JSON.stringify({ created: '__simulated_0' }),
+    ]
+
+    const errors = await executeToolCalls(toolCalls, simulatedResults, ctx)
+
+    expect(errors).toHaveLength(0)
+    expect(useBoardStore.getState().objects).toHaveLength(1)
+  })
+
+  it('collects errors from failed tool calls', async () => {
+    const toolCalls = [
+      { id: 'call_move', type: 'function' as const, function: { name: 'moveObject', arguments: JSON.stringify({ objectId: 'nonexistent', x: 0, y: 0 }) } },
+    ]
+    const simulatedResults = [JSON.stringify({ success: true })]
+
+    const errors = await executeToolCalls(toolCalls, simulatedResults, ctx)
+
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toContain('moveObject')
+    expect(errors[0]).toContain('Object not found')
+  })
+
+  it('works with empty simulatedResults (backward compat)', async () => {
+    const toolCalls = [
+      makeToolCall('createStickyNote', { text: 'Test', x: 100, y: 100 }),
+    ]
+
+    const errors = await executeToolCalls(toolCalls, [], ctx)
+
+    expect(errors).toHaveLength(0)
+    expect(useBoardStore.getState().objects).toHaveLength(1)
   })
 })
