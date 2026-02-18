@@ -14,7 +14,7 @@ export const useBoardListStore = create<BoardListState>((set, get) => ({
   boards: [],
   loading: false,
 
-  fetchBoards: async (userId: string) => {
+  fetchBoards: async (_userId: string) => {
     set({ loading: true })
     const { data, error } = await supabase
       .from('boards')
