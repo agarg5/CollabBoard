@@ -2,6 +2,10 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { traceable } from 'npm:langsmith@0.3/traceable'
 
+interface OpenAIResponse {
+  choices?: Array<{ message: { content: string; tool_calls?: unknown[] } }>
+}
+
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -290,12 +294,12 @@ Deno.serve(async (req) => {
         throw new Error(`OpenAI API error ${res.status}: ${errorBody}`)
       }
 
-      return res.json()
+      return res.json() as Promise<OpenAIResponse>
     },
     { name: 'ai-agent-completion', run_type: 'llm' },
   )
 
-  let data: Record<string, unknown>
+  let data: OpenAIResponse
   try {
     data = await callOpenAI({ messages, tools: TOOLS })
   } catch (err) {
@@ -306,8 +310,7 @@ Deno.serve(async (req) => {
     })
   }
 
-  const choices = data.choices as Array<{ message: { content: string; tool_calls?: unknown[] } }> | undefined
-  const choice = choices?.[0]
+  const choice = data.choices?.[0]
 
   if (!choice) {
     return new Response(JSON.stringify({ error: 'No response from AI' }), {
