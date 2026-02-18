@@ -10,7 +10,7 @@ interface StickyNoteProps {
   onDragStart: (e: import('konva').default.KonvaEventObject<DragEvent>) => void
   onDragMove?: (e: import('konva').default.KonvaEventObject<DragEvent>) => void
   onDragEnd: (id: string, x: number, y: number) => void
-  onTransformEnd: (id: string, attrs: { x: number; y: number; width: number; height: number }) => void
+  onTransformEnd: (id: string, attrs: { x: number; y: number; width: number; height: number; rotation?: number }) => void
   onDoubleClick: (id: string) => void
 }
 
@@ -50,6 +50,7 @@ export function StickyNote({
       y: node.y(),
       width: Math.max(MIN_WIDTH, node.width() * scaleX),
       height: Math.max(MIN_HEIGHT, node.height() * scaleY),
+      rotation: node.rotation(),
     })
   }
 
@@ -60,6 +61,7 @@ export function StickyNote({
       y={obj.y}
       width={obj.width}
       height={obj.height}
+      rotation={obj.rotation ?? 0}
       draggable
       onClick={(e) => onSelect(obj.id, e)}
       onTap={() => onSelect(obj.id)}

@@ -12,6 +12,7 @@ const makeObject = (overrides: Partial<BoardObject> = {}): BoardObject => ({
   width: 200,
   height: 200,
   z_index: 1,
+  rotation: 0,
   created_by: 'user-1',
   updated_at: new Date().toISOString(),
   ...overrides,
@@ -189,6 +190,40 @@ describe('boardStore', () => {
       useBoardStore.setState({ objects: [makeObject()], selectedIds: [] })
       const result = useBoardStore.getState().duplicateSelected(null)
       expect(result).toHaveLength(0)
+    })
+  })
+
+  describe('rotation', () => {
+    it('updateObject persists rotation value', () => {
+      const obj = makeObject({ id: 'rot-1', rotation: 0 })
+      useBoardStore.getState().addObject(obj)
+      useBoardStore.getState().updateObject('rot-1', { rotation: 45 })
+      expect(useBoardStore.getState().objects[0].rotation).toBe(45)
+    })
+
+    it('rotation defaults to 0 for new objects', () => {
+      const obj = makeObject()
+      useBoardStore.getState().addObject(obj)
+      expect(useBoardStore.getState().objects[0].rotation).toBe(0)
+    })
+
+    it('duplicateSelected preserves rotation', () => {
+      const obj = makeObject({ id: 'rot-2', rotation: 90 })
+      useBoardStore.setState({ boardId: 'board-1', objects: [obj], selectedIds: ['rot-2'] })
+      const duped = useBoardStore.getState().duplicateSelected(null)
+      expect(duped[0].rotation).toBe(90)
+    })
+
+    it('pasteClipboard preserves rotation', () => {
+      const obj = makeObject({ id: 'rot-3', rotation: 180 })
+      useBoardStore.setState({
+        boardId: 'board-1',
+        objects: [obj],
+        clipboard: [obj],
+        pasteCount: 0,
+      })
+      const pasted = useBoardStore.getState().pasteClipboard(null)
+      expect(pasted[0].rotation).toBe(180)
     })
   })
 })

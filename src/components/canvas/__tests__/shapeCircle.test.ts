@@ -13,6 +13,7 @@ function createCircle(overrides: Partial<BoardObject> = {}): BoardObject {
     width: 120,
     height: 120,
     z_index: 0,
+    rotation: 0,
     created_by: '',
     updated_at: new Date().toISOString(),
     ...overrides,

@@ -24,6 +24,7 @@ const makeObject = (overrides: Partial<BoardObject> = {}): BoardObject => ({
   width: 200,
   height: 200,
   z_index: 1,
+  rotation: 0,
   created_by: 'user-1',
   updated_at: '2026-01-01T00:00:00.000Z',
   ...overrides,

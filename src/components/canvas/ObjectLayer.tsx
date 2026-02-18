@@ -256,7 +256,7 @@ export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
 
   function handleTransformEnd(
     id: string,
-    attrs: { x: number; y: number; width: number; height: number },
+    attrs: { x: number; y: number; width: number; height: number; rotation?: number },
   ) {
     const updated_at = new Date().toISOString()
     updateObject(id, { ...attrs, updated_at })
@@ -389,6 +389,7 @@ export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
       )}
       <Transformer
         ref={transformerRef}
+        rotateEnabled
         keepRatio={false}
         boundBoxFunc={(_oldBox, newBox) => ({
           ...newBox,

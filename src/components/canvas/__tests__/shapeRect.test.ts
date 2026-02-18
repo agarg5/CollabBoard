@@ -13,6 +13,7 @@ function createRect(overrides: Partial<BoardObject> = {}): BoardObject {
     width: 150,
     height: 100,
     z_index: 0,
+    rotation: 0,
     created_by: '',
     updated_at: new Date().toISOString(),
     ...overrides,

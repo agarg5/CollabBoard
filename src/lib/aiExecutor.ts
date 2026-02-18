@@ -39,6 +39,7 @@ function buildObject(
     id: crypto.randomUUID(),
     board_id: ctx.boardId,
     z_index: nextZIndex(),
+    rotation: 0,
     created_by: ctx.userId,
     updated_at: new Date().toISOString(),
     ...overrides,
