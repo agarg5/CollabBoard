@@ -6,6 +6,11 @@ interface OpenAIResponse {
   choices?: Array<{ message: { content: string; tool_calls?: unknown[] } }>
 }
 
+interface ChatMessage {
+  role: string
+  content: string
+}
+
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -204,6 +209,33 @@ const TOOLS = [
   },
 ]
 
+const callOpenAI = traceable(
+  async (params: { messages: ChatMessage[]; tools: typeof TOOLS }) => {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: params.messages,
+        tools: params.tools,
+        tool_choice: 'auto',
+        temperature: 0.7,
+      }),
+    })
+
+    if (!res.ok) {
+      const errorBody = await res.text()
+      throw new Error(`OpenAI API error ${res.status}: ${errorBody}`)
+    }
+
+    return res.json() as Promise<OpenAIResponse>
+  },
+  { name: 'ai-agent-completion', run_type: 'llm' },
+)
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -271,33 +303,6 @@ Deno.serve(async (req) => {
     ...(messageHistory ?? []),
     { role: 'user', content: prompt },
   ]
-
-  const callOpenAI = traceable(
-    async (params: { messages: typeof messages; tools: typeof TOOLS }) => {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: params.messages,
-          tools: params.tools,
-          tool_choice: 'auto',
-          temperature: 0.7,
-        }),
-      })
-
-      if (!res.ok) {
-        const errorBody = await res.text()
-        throw new Error(`OpenAI API error ${res.status}: ${errorBody}`)
-      }
-
-      return res.json() as Promise<OpenAIResponse>
-    },
-    { name: 'ai-agent-completion', run_type: 'llm' },
-  )
 
   let data: OpenAIResponse
   try {
