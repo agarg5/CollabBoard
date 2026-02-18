@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
     "test:stress": "echo 'Run k6 scripts from tests/stress/'",
     "typecheck": "tsc -b --noEmit"
   },
