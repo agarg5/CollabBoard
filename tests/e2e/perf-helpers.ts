@@ -117,6 +117,16 @@ export async function openBoardAsUser(
 
   // Wait for canvas toolbar to confirm board loaded
   await page.getByRole('button', { name: /Select/ }).waitFor({ timeout: 15000 })
+
+  // Wait for Realtime subscription to be fully established
+  await page.waitForFunction(
+    () => {
+      const store = (window as any).__connectionStore
+      return store?.getState().status === 'connected'
+    },
+    { timeout: 15000 },
+  )
+
   return { page, context }
 }
 
