@@ -90,7 +90,7 @@ export async function openBoardAsUser(
   browser: Browser,
   boardId: string,
   userId: string,
-  baseURL: string,
+  baseURL = 'http://localhost:5173',
 ): Promise<{ page: Page; context: BrowserContext }> {
   const context = await browser.newContext({ baseURL })
   const page = await context.newPage()
@@ -123,7 +123,7 @@ export async function openBoardAsUser(
 export async function openTwoUsers(
   browser: Browser,
   boardId: string,
-  baseURL: string,
+  baseURL = 'http://localhost:5173',
 ): Promise<{
   pageA: Page
   pageB: Page

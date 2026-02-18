@@ -48,7 +48,7 @@ export function makeStickyNote(boardId, index) {
     id: uuid(),
     board_id: boardId,
     type: 'sticky_note',
-    properties: JSON.stringify({ text: `k6 Note ${index}`, color: '#fef08a' }),
+    properties: { text: `k6 Note ${index}`, color: '#fef08a' },
     x: 100 + (index % 10) * 220,
     y: 100 + Math.floor(index / 10) * 220,
     width: 200,

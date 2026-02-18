@@ -34,6 +34,7 @@ export const options = {
     },
   },
   thresholds: {
+    checks: ['rate>0.95'],
     cursor_broadcast_latency: ['p(95)<100'],
   },
 }

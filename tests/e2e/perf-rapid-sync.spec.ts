@@ -24,11 +24,11 @@ test.describe('Rapid sync (Scenario 3)', () => {
   test('20 rapid object creations all sync to second user', async ({
     browser,
   }) => {
-    const baseURL = 'http://localhost:5173'
+
     const { pageA, pageB, contextA, contextB } = await openTwoUsers(
       browser,
       boardId,
-      baseURL,
+
     )
 
     try {
@@ -74,14 +74,14 @@ test.describe('Rapid sync (Scenario 3)', () => {
   })
 
   test('rapid object updates converge within 2s', async ({ browser }) => {
-    const baseURL = 'http://localhost:5173'
+
     // Seed one object first
     const [objId] = await seedObjects(sb, boardId, 1, 'sticky_note')
 
     const { pageA, pageB, contextA, contextB } = await openTwoUsers(
       browser,
       boardId,
-      baseURL,
+
     )
 
     try {

@@ -41,6 +41,7 @@ export const options = {
     },
   },
   thresholds: {
+    checks: ['rate>0.95'],
     object_sync_latency: ['p(95)<200'],
     http_req_duration: ['p(95)<500'],
   },
@@ -48,8 +49,7 @@ export const options = {
 
 export default function () {
   const vuId = __VU
-  let insertReceived = false
-  let insertReceivedAt = 0
+  let lastInsertId = ''
   let lastInsertTime = 0
 
   // Connect to Realtime WebSocket
@@ -93,15 +93,14 @@ export default function () {
       wsMessages.add(1)
       try {
         const data = JSON.parse(msg)
-        // Check for postgres INSERT notification
+        // Check for postgres INSERT notification matching our own insert
         if (
           data.event === 'postgres_changes' &&
           data.payload?.data?.type === 'INSERT'
         ) {
-          insertReceived = true
-          insertReceivedAt = Date.now()
-          if (lastInsertTime > 0) {
-            syncLatency.add(insertReceivedAt - lastInsertTime)
+          const record = data.payload.data.record
+          if (record && record.id === lastInsertId && lastInsertTime > 0) {
+            syncLatency.add(Date.now() - lastInsertTime)
           }
         }
       } catch {
@@ -114,10 +113,11 @@ export default function () {
 
     // Create 5 objects, measuring sync latency for each
     for (let i = 0; i < 5; i++) {
-      insertReceived = false
+      const note = makeStickyNote(BOARD_ID, vuId * 100 + i)
+      lastInsertId = note.id
       lastInsertTime = Date.now()
 
-      const payload = JSON.stringify(makeStickyNote(BOARD_ID, vuId * 100 + i))
+      const payload = JSON.stringify(note)
       const postRes = http.post(`${REST_URL}/board_objects`, payload, {
         headers: REST_HEADERS,
       })

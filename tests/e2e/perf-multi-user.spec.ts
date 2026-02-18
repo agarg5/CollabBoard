@@ -25,11 +25,10 @@ test.describe('Multi-user sync (Scenarios 1 & 2)', () => {
   test("two users see each other's object creation within 500ms", async ({
     browser,
   }) => {
-    const baseURL = 'http://localhost:5173'
+
     const { pageA, pageB, contextA, contextB } = await openTwoUsers(
       browser,
       boardId,
-      baseURL,
     )
 
     try {
@@ -38,7 +37,6 @@ test.describe('Multi-user sync (Scenarios 1 & 2)', () => {
       expect(await getObjectCount(pageB)).toBe(0)
 
       // Insert object via Supabase REST (server-side) — triggers postgres_changes
-      const startMs = Date.now()
       await sb.from('board_objects').insert({
         id: crypto.randomUUID(),
         board_id: boardId,
@@ -60,13 +58,11 @@ test.describe('Multi-user sync (Scenarios 1 & 2)', () => {
       expect(latencyA).toBeGreaterThan(-1)
       expect(latencyB).toBeGreaterThan(-1)
 
-      const totalA = Date.now() - startMs
-      const totalB = Date.now() - startMs
-      console.log(`Object sync latency — Page A: ${totalA}ms, Page B: ${totalB}ms`)
+      console.log(`Object sync latency — Page A: ${latencyA}ms, Page B: ${latencyB}ms`)
 
       // Relaxed threshold: within 500ms (REST + realtime + render)
-      expect(totalA).toBeLessThan(500)
-      expect(totalB).toBeLessThan(500)
+      expect(latencyA).toBeLessThan(500)
+      expect(latencyB).toBeLessThan(500)
     } finally {
       await contextA.close()
       await contextB.close()
@@ -76,11 +72,10 @@ test.describe('Multi-user sync (Scenarios 1 & 2)', () => {
   test("cursor movement appears on other user's screen", async ({
     browser,
   }) => {
-    const baseURL = 'http://localhost:5173'
+
     const { pageA, pageB, contextA, contextB } = await openTwoUsers(
       browser,
       boardId,
-      baseURL,
     )
 
     try {
@@ -108,12 +103,11 @@ test.describe('Multi-user sync (Scenarios 1 & 2)', () => {
   })
 
   test('refresh mid-edit preserves all objects', async ({ browser }) => {
-    const baseURL = 'http://localhost:5173'
+
     const { page, context } = await openBoardAsUser(
       browser,
       boardId,
       USER_A_ID,
-      baseURL,
     )
 
     try {

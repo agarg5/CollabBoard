@@ -24,14 +24,14 @@ test.describe('FPS performance', () => {
   })
 
   test('60 FPS during pan with 100 objects', async ({ browser }) => {
-    const baseURL = 'http://localhost:5173'
+
     await seedObjects(sb, boardId, 100, 'sticky_note')
 
     const { page, context } = await openBoardAsUser(
       browser,
       boardId,
       USER_A_ID,
-      baseURL,
+
     )
 
     try {
@@ -78,14 +78,14 @@ test.describe('FPS performance', () => {
   })
 
   test('usable FPS with 500+ objects during zoom', async ({ browser }) => {
-    const baseURL = 'http://localhost:5173'
+
     await seedObjects(sb, boardId, 500, 'sticky_note')
 
     const { page, context } = await openBoardAsUser(
       browser,
       boardId,
       USER_A_ID,
-      baseURL,
+
     )
 
     try {
@@ -127,14 +127,14 @@ test.describe('FPS performance', () => {
   })
 
   test('60 FPS during object drag with 50 objects', async ({ browser }) => {
-    const baseURL = 'http://localhost:5173'
+
     await seedObjects(sb, boardId, 50, 'sticky_note')
 
     const { page, context } = await openBoardAsUser(
       browser,
       boardId,
       USER_A_ID,
-      baseURL,
+
     )
 
     try {

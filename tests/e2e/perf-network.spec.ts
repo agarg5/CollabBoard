@@ -6,7 +6,6 @@ import {
   openBoardAsUser,
   openTwoUsers,
   USER_A_ID,
-  USER_B_ID,
   getObjectCount,
   waitForObjectCount,
 } from './perf-helpers'
@@ -24,12 +23,12 @@ test.describe('Network resilience (Scenario 4)', () => {
   })
 
   test('survives slow 3G network conditions', async ({ browser }) => {
-    const baseURL = 'http://localhost:5173'
+
     const { page, context } = await openBoardAsUser(
       browser,
       boardId,
       USER_A_ID,
-      baseURL,
+
     )
 
     try {
@@ -110,12 +109,12 @@ test.describe('Network resilience (Scenario 4)', () => {
   })
 
   test('disconnect and reconnect restores state', async ({ browser }) => {
-    const baseURL = 'http://localhost:5173'
+
     const { page, context } = await openBoardAsUser(
       browser,
       boardId,
       USER_A_ID,
-      baseURL,
+
     )
 
     try {
@@ -156,11 +155,11 @@ test.describe('Network resilience (Scenario 4)', () => {
   test('objects created during disconnect appear after reconnect', async ({
     browser,
   }) => {
-    const baseURL = 'http://localhost:5173'
+
     const { pageA, pageB, contextA, contextB } = await openTwoUsers(
       browser,
       boardId,
-      baseURL,
+
     )
 
     try {
