@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useUiStore } from '../../store/uiStore'
 import { useAI } from '../../hooks/useAI'
 
+const MAX_PROMPT_LENGTH = 2000
+
 export function AIChatPanel() {
   const setChatPanelOpen = useUiStore((s) => s.setChatPanelOpen)
   const messages = useUiStore((s) => s.chatMessages)
@@ -131,17 +133,21 @@ export function AIChatPanel() {
   }
 
   function renderInput() {
+    const charsLeft = MAX_PROMPT_LENGTH - input.length
+    const showCounter = charsLeft <= 200
+
     return (
       <div className="border-t border-gray-200 p-3">
         <div className="flex gap-2 items-end">
           <textarea
             ref={textareaRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => setInput(e.target.value.slice(0, MAX_PROMPT_LENGTH))}
             onKeyDown={handleKeyDown}
             placeholder="Ask the AI..."
             disabled={loading}
             rows={1}
+            maxLength={MAX_PROMPT_LENGTH}
             className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <button
@@ -162,6 +168,11 @@ export function AIChatPanel() {
             )}
           </button>
         </div>
+        {showCounter && (
+          <p className={`text-xs mt-1 text-right ${charsLeft <= 50 ? 'text-red-500' : 'text-gray-400'}`}>
+            {charsLeft} characters remaining
+          </p>
+        )}
       </div>
     )
   }

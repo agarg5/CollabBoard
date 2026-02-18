@@ -25,9 +25,19 @@ const corsHeaders = {
 }
 
 const MAX_TOOL_ITERATIONS = 5
+// Keep in sync with src/components/ui/AIChatPanel.tsx
+const MAX_PROMPT_LENGTH = 2000
 
 const SYSTEM_PROMPT = `You are an AI assistant for CollabBoard, a collaborative whiteboard app.
 You help users create and manipulate objects on the board using the provided tool functions.
+
+IMPORTANT — Topic guardrails:
+- You are ONLY a whiteboard assistant. You can ONLY help with creating, editing, arranging, and managing objects on the board.
+- If a user asks about anything unrelated to the whiteboard (e.g. general knowledge, coding help, personal advice, homework, trivia, news, math problems, creative writing not for the board), politely decline and redirect them to board-related tasks.
+- Example refusal: "I'm your CollabBoard assistant — I can help you create sticky notes, shapes, frames, and layouts on the board. For other questions, please use a general-purpose AI assistant."
+- Never generate offensive, hateful, violent, or sexually explicit content on the board.
+- If asked to put inappropriate content on sticky notes or shapes, decline and suggest appropriate alternatives.
+- You may discuss board strategy, brainstorming techniques, and layout advice since these relate to whiteboard usage.
 
 Rules:
 - Always use tools to fulfill requests. Never just describe what you would do.
@@ -305,6 +315,40 @@ Deno.serve(async (req) => {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
+  }
+
+  if (prompt.length > MAX_PROMPT_LENGTH) {
+    return new Response(
+      JSON.stringify({ error: `Message too long. Please keep it under ${MAX_PROMPT_LENGTH} characters.` }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    )
+  }
+
+  // Run OpenAI Moderation API to flag harmful content before sending to GPT
+  try {
+    const modRes = await fetch('https://api.openai.com/v1/moderations', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ input: prompt }),
+    })
+    if (modRes.ok) {
+      const modData = await modRes.json()
+      if (modData.results?.[0]?.flagged) {
+        return new Response(
+          JSON.stringify({
+            message: "I can't process that request. Please keep your messages appropriate and related to the whiteboard.",
+            toolCalls: [],
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+    }
+  } catch {
+    // Moderation API failure is non-blocking — proceed with the request
+    console.warn('Moderation API check failed, proceeding without moderation')
   }
 
   const boardContext =
