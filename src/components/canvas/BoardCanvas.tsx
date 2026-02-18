@@ -88,6 +88,9 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
       const editing = useUiStore.getState().editingId !== null
       if (editing) return
 
+      const tag = (document.activeElement?.tagName ?? '').toLowerCase()
+      if (tag === 'input' || tag === 'textarea') return
+
       if (e.key === 'Escape') {
         // Cancel connector creation if in progress
         if (connectorStartRef.current) {
