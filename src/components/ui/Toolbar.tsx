@@ -279,6 +279,34 @@ export function Toolbar() {
         Connector
       </button>
       <button
+        onClick={() => setTool('frame')}
+        className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
+          tool === 'frame' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+        }`}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          className="inline-block mr-1 -mt-0.5"
+        >
+          <rect
+            x="2"
+            y="4"
+            width="12"
+            height="10"
+            rx="1"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeDasharray="3 2"
+            fill="none"
+          />
+          <line x1="3" y1="2.5" x2="8" y2="2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        </svg>
+        Frame
+      </button>
+      <button
         onClick={() => setTool('text')}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
           tool === 'text' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'

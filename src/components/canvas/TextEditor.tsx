@@ -4,6 +4,7 @@ import { useUiStore } from '../../store/uiStore'
 import { patchObject } from '../../lib/boardSync'
 import { PADDING as STICKY_PADDING, FONT_SIZE as STICKY_FONT_SIZE, FONT_FAMILY, LINE_HEIGHT as STICKY_LINE_HEIGHT } from './StickyNote'
 import { FONT_SIZE as TEXT_FONT_SIZE, LINE_HEIGHT as TEXT_LINE_HEIGHT, PADDING as TEXT_PADDING } from './TextObject'
+import { LABEL_FONT_SIZE as FRAME_FONT_SIZE, LABEL_PADDING as FRAME_PADDING } from './Frame'
 
 export function TextEditor() {
   const editingId = useUiStore((s) => s.editingId)
@@ -16,33 +17,37 @@ export function TextEditor() {
   const updateObject = useBoardStore((s) => s.updateObject)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  const isFrame = obj?.type === 'frame'
+  const textPropKey = isFrame ? 'label' : 'text'
+
   useEffect(() => {
     if (obj && textareaRef.current) {
       textareaRef.current.focus()
-      textareaRef.current.value = (obj.properties.text as string) || ''
+      textareaRef.current.value = (obj.properties[textPropKey] as string) || ''
     }
-  }, [obj])
+  }, [obj, textPropKey])
 
   if (!obj) return null
 
   const isText = obj.type === 'text'
-  const fontSize = isText ? ((obj.properties.fontSize as number) || TEXT_FONT_SIZE) : STICKY_FONT_SIZE
-  const padding = isText ? TEXT_PADDING : STICKY_PADDING
-  const lineHeight = isText ? TEXT_LINE_HEIGHT : STICKY_LINE_HEIGHT
+  const fontSize = isFrame ? FRAME_FONT_SIZE : isText ? ((obj.properties.fontSize as number) || TEXT_FONT_SIZE) : STICKY_FONT_SIZE
+  const padding = isFrame ? FRAME_PADDING : isText ? TEXT_PADDING : STICKY_PADDING
+  const lineHeight = isFrame ? 1.2 : isText ? TEXT_LINE_HEIGHT : STICKY_LINE_HEIGHT
 
   const x = obj.x * stageScale + stagePosition.x
   const y = obj.y * stageScale + stagePosition.y
   const width = obj.width * stageScale
-  const height = obj.height * stageScale
+  const fullHeight = obj.height * stageScale
+  // For frames, only show the editor at the label area (top portion)
+  const height = isFrame ? Math.min(fullHeight, (fontSize + padding * 2) * stageScale) : fullHeight
   const scaledFontSize = fontSize * stageScale
   const scaledPadding = padding * stageScale
 
   function handleBlur() {
     if (!obj || !textareaRef.current) return
-    const text = textareaRef.current.value
+    const value = textareaRef.current.value
     const updated_at = new Date().toISOString()
-    // TODO: persist color/fontSize changes from a future text color picker
-    const properties = { ...obj.properties, text }
+    const properties = { ...obj.properties, [textPropKey]: value }
     updateObject(obj.id, { properties, updated_at })
     patchObject(obj.id, { properties, updated_at })
     setEditingId(null)
@@ -65,7 +70,7 @@ export function TextEditor() {
         height: height - scaledPadding * 2,
         fontSize: scaledFontSize,
         lineHeight: `${lineHeight}`,
-        color: isText ? ((obj.properties.color as string) || '#1e293b') : undefined,
+        color: isFrame ? ((obj.properties.strokeColor as string) || '#94a3b8') : isText ? ((obj.properties.color as string) || '#1e293b') : undefined,
         fontFamily: FONT_FAMILY,
       }}
       onBlur={handleBlur}

@@ -10,6 +10,7 @@ import { ShapeCircle, MIN_WIDTH as CIRCLE_MIN_W, MIN_HEIGHT as CIRCLE_MIN_H } fr
 import { TextObject, MIN_WIDTH as TEXT_MIN_W, MIN_HEIGHT as TEXT_MIN_H } from './TextObject'
 import { ShapeLine, MIN_WIDTH as LINE_MIN_W, MIN_HEIGHT as LINE_MIN_H } from './ShapeLine'
 import { Connector, MIN_WIDTH as CONN_MIN_W, MIN_HEIGHT as CONN_MIN_H } from './Connector'
+import { Frame, MIN_WIDTH as FRAME_MIN_W, MIN_HEIGHT as FRAME_MIN_H } from './Frame'
 import type { SelectionRect } from './BoardCanvas'
 
 const MIN_SIZES: Record<string, { width: number; height: number }> = {
@@ -19,6 +20,7 @@ const MIN_SIZES: Record<string, { width: number; height: number }> = {
   text: { width: TEXT_MIN_W, height: TEXT_MIN_H },
   line: { width: LINE_MIN_W, height: LINE_MIN_H },
   connector: { width: CONN_MIN_W, height: CONN_MIN_H },
+  frame: { width: FRAME_MIN_W, height: FRAME_MIN_H },
 }
 const DEFAULT_MIN = { width: 50, height: 50 }
 
@@ -335,6 +337,22 @@ export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
               onDragMove={handleDragMove}
               onDragEnd={handleDragEnd}
               onTransformEnd={handleTransformEnd}
+            />
+          )
+        }
+        if (obj.type === 'frame') {
+          return (
+            <Frame
+              key={obj.id}
+              obj={obj}
+              isSelected={isSelected}
+              isEditing={editingId === obj.id}
+              onSelect={handleSelect}
+              onDragStart={handleDragStart}
+              onDragMove={handleDragMove}
+              onDragEnd={handleDragEnd}
+              onTransformEnd={handleTransformEnd}
+              onDoubleClick={handleDoubleClick}
             />
           )
         }
