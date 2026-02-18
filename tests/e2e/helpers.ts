@@ -6,9 +6,9 @@ export const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
 /** Create a board from the board list page and return its name. */
 export async function createBoard(page: Page, prefix = 'E2E'): Promise<string> {
   const boardName = `${prefix} ${Date.now()}`
-  await page.getByRole('button', { name: '+ New Board' }).click()
+  await page.getByRole('button', { name: 'Create new board' }).click()
   await page.getByPlaceholder('Board name').fill(boardName)
-  await page.getByRole('button', { name: 'Create' }).click()
+  await page.getByRole('button', { name: 'Create', exact: true }).click()
   await expect(page.getByText(boardName)).toBeVisible({ timeout: 5000 })
   return boardName
 }
@@ -19,7 +19,7 @@ export async function deleteBoard(page: Page, boardName: string) {
   // Use .first() in case duplicate-named boards exist from previous failed runs
   const boardCard = page.getByTestId('board-card').filter({ hasText: boardName }).first()
   await boardCard.hover()
-  await boardCard.getByTitle('Delete board').click()
+  await boardCard.getByRole('button', { name: /Delete board/ }).click()
   // Wait for at least one instance to disappear (card count should decrease)
   await expect(boardCard).not.toBeVisible({ timeout: 5000 })
 }

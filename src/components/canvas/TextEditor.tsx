@@ -62,6 +62,7 @@ export function TextEditor() {
   return (
     <textarea
       ref={textareaRef}
+      aria-label={`Edit ${isFrame ? 'frame label' : isText ? 'text' : 'sticky note'}`}
       className="absolute border-none outline-none resize-none bg-transparent overflow-hidden"
       style={{
         left: x + scaledPadding,

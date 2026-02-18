@@ -16,14 +16,17 @@ export function PresencePanel() {
   if (onlineUsers.length === 0) return null
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1" role="group" aria-label="Online users">
       {onlineUsers.map((user) => {
         const isMe = user.user_id === myId
+        const label = isMe ? `${user.user_name} (you)` : user.user_name
         const initials = getInitials(user.user_name)
         return (
           <div
             key={user.user_id}
-            title={isMe ? `${user.user_name} (you)` : user.user_name}
+            role="img"
+            aria-label={label}
+            title={label}
             className="flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold text-white shrink-0"
             style={{ backgroundColor: user.color }}
           >

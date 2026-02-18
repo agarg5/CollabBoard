@@ -103,9 +103,11 @@ export function Toolbar() {
   })()
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-200">
+    <nav className="flex items-center gap-2 px-4 py-2 border-b border-gray-200" aria-label="Canvas tools">
       <button
         onClick={() => setTool('select')}
+        aria-label="Select tool"
+        aria-pressed={tool === 'select'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
           tool === 'select' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
         }`}
@@ -115,6 +117,7 @@ export function Toolbar() {
           height="16"
           viewBox="0 0 16 16"
           fill="none"
+          aria-hidden="true"
           className="inline-block mr-1 -mt-0.5"
         >
           <path
@@ -128,6 +131,8 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('hand')}
+        aria-label="Hand (pan) tool"
+        aria-pressed={tool === 'hand'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
           tool === 'hand' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
         }`}
@@ -137,6 +142,7 @@ export function Toolbar() {
           height="16"
           viewBox="0 0 16 16"
           fill="none"
+          aria-hidden="true"
           className="inline-block mr-1 -mt-0.5"
         >
           <path
@@ -151,6 +157,8 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('sticky_note')}
+        aria-label="Sticky note tool"
+        aria-pressed={tool === 'sticky_note'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
           tool === 'sticky_note' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
         }`}
@@ -160,6 +168,7 @@ export function Toolbar() {
           height="16"
           viewBox="0 0 16 16"
           fill="none"
+          aria-hidden="true"
           className="inline-block mr-1 -mt-0.5"
         >
           <rect
@@ -178,6 +187,8 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('rectangle')}
+        aria-label="Rectangle tool"
+        aria-pressed={tool === 'rectangle'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
           tool === 'rectangle' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
         }`}
@@ -187,6 +198,7 @@ export function Toolbar() {
           height="16"
           viewBox="0 0 16 16"
           fill="none"
+          aria-hidden="true"
           className="inline-block mr-1 -mt-0.5"
         >
           <rect
@@ -202,6 +214,8 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('circle')}
+        aria-label="Circle tool"
+        aria-pressed={tool === 'circle'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
           tool === 'circle' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
         }`}
@@ -211,6 +225,7 @@ export function Toolbar() {
           height="16"
           viewBox="0 0 16 16"
           fill="none"
+          aria-hidden="true"
           className="inline-block mr-1 -mt-0.5"
         >
           <ellipse
@@ -226,6 +241,8 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('line')}
+        aria-label="Line tool"
+        aria-pressed={tool === 'line'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
           tool === 'line' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
         }`}
@@ -235,6 +252,7 @@ export function Toolbar() {
           height="16"
           viewBox="0 0 16 16"
           fill="none"
+          aria-hidden="true"
           className="inline-block mr-1 -mt-0.5"
         >
           <line
@@ -251,6 +269,8 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('connector')}
+        aria-label="Connector tool"
+        aria-pressed={tool === 'connector'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
           tool === 'connector' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
         }`}
@@ -260,6 +280,7 @@ export function Toolbar() {
           height="16"
           viewBox="0 0 16 16"
           fill="none"
+          aria-hidden="true"
           className="inline-block mr-1 -mt-0.5"
         >
           <path
@@ -280,6 +301,8 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('frame')}
+        aria-label="Frame tool"
+        aria-pressed={tool === 'frame'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
           tool === 'frame' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
         }`}
@@ -289,6 +312,7 @@ export function Toolbar() {
           height="16"
           viewBox="0 0 16 16"
           fill="none"
+          aria-hidden="true"
           className="inline-block mr-1 -mt-0.5"
         >
           <rect
@@ -308,6 +332,8 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('text')}
+        aria-label="Text tool"
+        aria-pressed={tool === 'text'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
           tool === 'text' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
         }`}
@@ -317,6 +343,7 @@ export function Toolbar() {
           height="16"
           viewBox="0 0 16 16"
           fill="none"
+          aria-hidden="true"
           className="inline-block mr-1 -mt-0.5"
         >
           <path
@@ -331,9 +358,9 @@ export function Toolbar() {
 
       {selectedIds.length > 0 && (
         <>
-          <div className="w-px h-6 bg-gray-300 mx-1" />
+          <div className="w-px h-6 bg-gray-300 mx-1" role="separator" />
           <button
-            title="Delete selected"
+            aria-label="Delete selected"
             onClick={() => {
               const deletedIds = deleteSelectedObjects()
               deletedIds.forEach((id) => deleteObject(id))
@@ -345,6 +372,7 @@ export function Toolbar() {
               height="16"
               viewBox="0 0 16 16"
               fill="none"
+              aria-hidden="true"
               className="inline-block -mt-0.5"
             >
               <path
@@ -357,7 +385,7 @@ export function Toolbar() {
             </svg>
           </button>
           <button
-            title="Duplicate (Ctrl+D)"
+            aria-label="Duplicate selected (Ctrl+D)"
             onClick={handleDuplicate}
             className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-gray-100"
           >
@@ -366,6 +394,7 @@ export function Toolbar() {
               height="16"
               viewBox="0 0 16 16"
               fill="none"
+              aria-hidden="true"
               className="inline-block -mt-0.5"
             >
               <rect x="4" y="4" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.5" />
@@ -373,7 +402,7 @@ export function Toolbar() {
             </svg>
           </button>
           <button
-            title="Copy (Ctrl+C)"
+            aria-label="Copy selected (Ctrl+C)"
             onClick={copySelected}
             className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-gray-100"
           >
@@ -382,6 +411,7 @@ export function Toolbar() {
               height="16"
               viewBox="0 0 16 16"
               fill="none"
+              aria-hidden="true"
               className="inline-block -mt-0.5"
             >
               <rect x="5" y="5" width="8" height="9" rx="1" stroke="currentColor" strokeWidth="1.5" />
@@ -393,9 +423,9 @@ export function Toolbar() {
 
       {clipboardLength > 0 && (
         <>
-          <div className="w-px h-6 bg-gray-300 mx-1" />
+          <div className="w-px h-6 bg-gray-300 mx-1" role="separator" />
           <button
-            title="Paste (Ctrl+V)"
+            aria-label="Paste from clipboard (Ctrl+V)"
             onClick={handlePaste}
             className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-gray-100"
           >
@@ -404,6 +434,7 @@ export function Toolbar() {
               height="16"
               viewBox="0 0 16 16"
               fill="none"
+              aria-hidden="true"
               className="inline-block -mt-0.5"
             >
               <rect x="3" y="4" width="10" height="11" rx="1" stroke="currentColor" strokeWidth="1.5" />
@@ -415,11 +446,11 @@ export function Toolbar() {
 
       {colorInfo && (
         <>
-          <div className="w-px h-6 bg-gray-300 mx-1" />
+          <div className="w-px h-6 bg-gray-300 mx-1" role="separator" />
           {colorInfo.palette.map((c) => (
             <button
               key={c.value}
-              title={c.name}
+              aria-label={`${c.name} color${activeColor === c.value ? ' (selected)' : ''}`}
               onClick={() => handleColorChange(c.value)}
               className={`w-6 h-6 rounded-full cursor-pointer border-2 transition-transform hover:scale-110 ${
                 activeColor === c.value
@@ -433,9 +464,10 @@ export function Toolbar() {
       )}
 
       <div className="ml-auto flex items-center">
-        <div className="w-px h-6 bg-gray-300 mx-1" />
+        <div className="w-px h-6 bg-gray-300 mx-1" role="separator" />
         <button
-          title="AI Assistant"
+          aria-label="AI Assistant"
+          aria-pressed={chatPanelOpen}
           onClick={() => setChatPanelOpen(!chatPanelOpen)}
           className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
             chatPanelOpen ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
@@ -446,6 +478,7 @@ export function Toolbar() {
             height="16"
             viewBox="0 0 16 16"
             fill="none"
+            aria-hidden="true"
             className="inline-block mr-1 -mt-0.5"
           >
             <path
@@ -458,6 +491,6 @@ export function Toolbar() {
           AI
         </button>
       </div>
-    </div>
+    </nav>
   )
 }

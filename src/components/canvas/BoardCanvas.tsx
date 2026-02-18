@@ -532,7 +532,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
   }
 
   return (
-    <div ref={containerRef} className={`relative flex-1 overflow-hidden bg-white ${getCursorClass()}`}>
+    <div ref={containerRef} className={`relative flex-1 overflow-hidden bg-white ${getCursorClass()}`} role="application" aria-label="Whiteboard canvas. Use the toolbar to select tools, then click on the canvas to create objects. Use keyboard shortcuts: Delete to remove, Ctrl+A to select all, Ctrl+C to copy, Ctrl+V to paste, Ctrl+D to duplicate, Space+drag to pan.">
       {dimensions.width > 0 && (
         <Stage
           width={dimensions.width}

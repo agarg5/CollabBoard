@@ -15,7 +15,7 @@ test.describe('Canvas interactions', () => {
   test('toolbar shows all tools', async ({ page }) => {
     await expect(page.getByRole('button', { name: /Select/ })).toBeVisible()
     await expect(page.getByRole('button', { name: /Hand/ })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Sticky Note/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Sticky note/i })).toBeVisible()
     await expect(page.getByRole('button', { name: /Rectangle/ })).toBeVisible()
     await expect(page.getByRole('button', { name: /Circle/ })).toBeVisible()
     await expect(page.getByRole('button', { name: /Line/ })).toBeVisible()
@@ -40,6 +40,6 @@ test.describe('Canvas interactions', () => {
   })
 
   test('shows user email in header', async ({ page }) => {
-    await expect(page.getByText('dev@collabboard.local')).toBeVisible()
+    await expect(page.getByText(/@collabboard\.local/)).toBeVisible()
   })
 })

@@ -29,7 +29,7 @@ test.describe('Object rotation', () => {
   })
 
   test('new objects have rotation 0 by default', async ({ page }) => {
-    await page.getByRole('button', { name: /Sticky Note/ }).click()
+    await page.getByRole('button', { name: /Sticky note/i }).click()
     await clickCanvasCenter(page)
     await expectObjectCount(page, 1)
 
@@ -73,7 +73,7 @@ test.describe('Object rotation', () => {
     })
 
     // Duplicate using toolbar
-    const dupBtn = page.getByTitle('Duplicate (Ctrl+D)')
+    const dupBtn = page.getByRole('button', { name: /Duplicate selected/ })
     await expect(dupBtn).toBeVisible()
     await dupBtn.click()
     await expectObjectCount(page, 2)
