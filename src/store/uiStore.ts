@@ -34,3 +34,8 @@ export const useUiStore = create<UiState>((set) => ({
   setChatPanelOpen: (chatPanelOpen) => set({ chatPanelOpen }),
   addChatMessage: (message) => set((s) => ({ chatMessages: [...s.chatMessages, message] })),
 }))
+
+// Expose store for E2E tests when running in dev bypass mode
+if (import.meta.env.VITE_DEV_BYPASS_AUTH === 'true') {
+  ;(window as unknown as Record<string, unknown>).__uiStore = useUiStore
+}
