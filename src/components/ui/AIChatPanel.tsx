@@ -1,34 +1,43 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useUiStore } from '../../store/uiStore'
 import { useAI } from '../../hooks/useAI'
 
-interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
-}
-
 export function AIChatPanel() {
   const setChatPanelOpen = useUiStore((s) => s.setChatPanelOpen)
+  const messages = useUiStore((s) => s.chatMessages)
+  const addChatMessage = useUiStore((s) => s.addChatMessage)
   const { sendPrompt, loading, error } = useAI()
-  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
+  const [dismissedError, setDismissedError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, loading])
+
+  const autoResize = useCallback(() => {
+    const ta = textareaRef.current
+    if (!ta) return
+    ta.style.height = 'auto'
+    ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`
+  }, [])
+
+  useEffect(() => {
+    autoResize()
+  }, [input, autoResize])
 
   async function handleSubmit() {
     const trimmed = input.trim()
     if (!trimmed || loading) return
 
     setInput('')
-    setMessages((prev) => [...prev, { role: 'user', content: trimmed }])
+    setDismissedError(null)
+    addChatMessage({ role: 'user', content: trimmed })
 
     const response = await sendPrompt(trimmed)
     if (response) {
-      setMessages((prev) => [...prev, { role: 'assistant', content: response }])
+      addChatMessage({ role: 'assistant', content: response })
     }
   }
 
@@ -39,10 +48,12 @@ export function AIChatPanel() {
     }
   }
 
+  const showError = error && error !== dismissedError
+
   return (
-    <div className="flex flex-col w-80 h-full border-l border-gray-200 bg-white">
+    <div className="flex flex-col w-80 shrink-0 h-full border-l border-gray-200 bg-white">
       {renderHeader()}
-      {error && renderError()}
+      {showError && renderError()}
       {renderMessages()}
       {renderInput()}
     </div>
@@ -67,8 +78,17 @@ export function AIChatPanel() {
 
   function renderError() {
     return (
-      <div className="px-4 py-2 text-sm text-red-700 bg-red-50 border-b border-red-200">
-        {error}
+      <div className="flex items-center justify-between px-4 py-2 text-sm text-red-700 bg-red-50 border-b border-red-200">
+        <span>{error}</span>
+        <button
+          onClick={() => setDismissedError(error)}
+          className="ml-2 p-0.5 rounded cursor-pointer hover:bg-red-100 transition-colors"
+          aria-label="Dismiss error"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
       </div>
     )
   }
@@ -97,10 +117,10 @@ export function AIChatPanel() {
         {loading && (
           <div className="flex justify-start">
             <div className="bg-gray-100 rounded-lg px-3 py-2 text-sm text-gray-500">
-              <span className="inline-flex gap-1">
-                <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
-                <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
-                <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
+              <span className="inline-flex gap-1 text-lg leading-none">
+                <span className="typing-dot-1">.</span>
+                <span className="typing-dot-2">.</span>
+                <span className="typing-dot-3">.</span>
               </span>
             </div>
           </div>
@@ -113,7 +133,7 @@ export function AIChatPanel() {
   function renderInput() {
     return (
       <div className="border-t border-gray-200 p-3">
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-end">
           <textarea
             ref={textareaRef}
             value={input}
@@ -137,7 +157,7 @@ export function AIChatPanel() {
               </svg>
             ) : (
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M2 8l5-5v3h5a2 2 0 012 2v0a2 2 0 01-2 2H7v3L2 8z" fill="currentColor" transform="rotate(-90 8 8)" />
+                <path d="M3 13L8 2l5 11H3z" fill="currentColor" transform="rotate(0 8 8)" />
               </svg>
             )}
           </button>
