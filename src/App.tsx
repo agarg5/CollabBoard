@@ -25,7 +25,7 @@ function BoardView({ boardId }: { boardId: string }) {
 
   return (
     <div className="flex flex-col w-screen h-screen">
-      <div className="flex items-center justify-between p-4">
+      <header className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setBoardId(null)}
@@ -42,17 +42,18 @@ function BoardView({ boardId }: { boardId: string }) {
           <span className="text-sm text-gray-500">{user!.email}</span>
           <button
             onClick={signOut}
+            aria-label="Sign out"
             className="px-4 py-2 text-sm cursor-pointer rounded hover:bg-gray-100 transition-colors"
           >
             Sign out
           </button>
         </div>
-      </div>
+      </header>
       <Toolbar />
-      <div className="flex flex-1 min-h-0">
+      <main className="flex flex-1 min-h-0">
         <BoardCanvas broadcastCursor={broadcastCursor} />
         {chatPanelOpen && <AIChatPanel />}
-      </div>
+      </main>
     </div>
   )
 }
@@ -78,9 +79,9 @@ function App() {
 
   function renderLoading() {
     return (
-      <div className="flex items-center justify-center w-screen h-screen">
+      <main className="flex items-center justify-center w-screen h-screen" role="status" aria-label="Loading application">
         <p className="text-gray-500">Loading...</p>
-      </div>
+      </main>
     )
   }
 }

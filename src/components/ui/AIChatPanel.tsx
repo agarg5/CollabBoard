@@ -51,12 +51,12 @@ export function AIChatPanel() {
   const showError = error && error !== dismissedError
 
   return (
-    <div className="flex flex-col w-80 shrink-0 h-full border-l border-gray-200 bg-white">
+    <aside className="flex flex-col w-80 shrink-0 h-full border-l border-gray-200 bg-white" aria-label="AI Assistant panel">
       {renderHeader()}
       {showError && renderError()}
       {renderMessages()}
       {renderInput()}
-    </div>
+    </aside>
   )
 
   function renderHeader() {
@@ -68,7 +68,7 @@ export function AIChatPanel() {
           className="p-1 rounded cursor-pointer hover:bg-gray-100 transition-colors"
           aria-label="Close AI panel"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </button>
@@ -78,14 +78,14 @@ export function AIChatPanel() {
 
   function renderError() {
     return (
-      <div className="flex items-center justify-between px-4 py-2 text-sm text-red-700 bg-red-50 border-b border-red-200">
+      <div role="alert" className="flex items-center justify-between px-4 py-2 text-sm text-red-700 bg-red-50 border-b border-red-200">
         <span>{error}</span>
         <button
           onClick={() => setDismissedError(error)}
           className="ml-2 p-0.5 rounded cursor-pointer hover:bg-red-100 transition-colors"
           aria-label="Dismiss error"
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
             <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </button>
@@ -95,7 +95,7 @@ export function AIChatPanel() {
 
   function renderMessages() {
     return (
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3" role="log" aria-label="Chat messages" aria-live="polite">
         {messages.length === 0 && (
           <p className="text-sm text-gray-400 text-center mt-8">
             Ask the AI to create objects, organize your board, or build templates.
@@ -116,7 +116,7 @@ export function AIChatPanel() {
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-lg px-3 py-2 text-sm text-gray-500">
+            <div className="bg-gray-100 rounded-lg px-3 py-2 text-sm text-gray-500" role="status" aria-label="AI is thinking">
               <span className="inline-flex gap-1 text-lg leading-none">
                 <span className="typing-dot-1">.</span>
                 <span className="typing-dot-2">.</span>
@@ -134,7 +134,9 @@ export function AIChatPanel() {
     return (
       <div className="border-t border-gray-200 p-3">
         <div className="flex gap-2 items-end">
+          <label htmlFor="ai-chat-input" className="sr-only">Message to AI assistant</label>
           <textarea
+            id="ai-chat-input"
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -151,12 +153,12 @@ export function AIChatPanel() {
             aria-label="Send message"
           >
             {loading ? (
-              <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+              <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
                 <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75" />
               </svg>
             ) : (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                 <path d="M3 13L8 2l5 11H3z" fill="currentColor" transform="rotate(0 8 8)" />
               </svg>
             )}

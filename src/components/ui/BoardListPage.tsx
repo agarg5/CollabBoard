@@ -58,9 +58,9 @@ export function BoardListPage() {
 
   function renderLoading() {
     return (
-      <div className="flex items-center justify-center w-screen h-screen">
+      <main className="flex items-center justify-center w-screen h-screen" role="status" aria-label="Loading boards">
         <p className="text-gray-500">Loading boards...</p>
-      </div>
+      </main>
     )
   }
 
@@ -74,6 +74,7 @@ export function BoardListPage() {
               <h2 className="text-2xl font-semibold text-gray-900">My Boards</h2>
               <button
                 onClick={() => setShowCreateDialog(true)}
+                aria-label="Create new board"
                 className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg cursor-pointer hover:bg-blue-700 transition-colors"
               >
                 + New Board
@@ -95,6 +96,7 @@ export function BoardListPage() {
           <span className="text-sm text-gray-500">{user!.email}</span>
           <button
             onClick={signOut}
+            aria-label="Sign out"
             className="px-4 py-2 text-sm cursor-pointer rounded hover:bg-gray-100 transition-colors"
           >
             Sign out
@@ -102,6 +104,7 @@ export function BoardListPage() {
           <button
             onClick={handleDeleteAccount}
             disabled={deletingAccount}
+            aria-label="Delete account"
             className="px-4 py-2 text-sm cursor-pointer rounded text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {deletingAccount ? 'Deleting...' : 'Delete Account'}
@@ -113,10 +116,12 @@ export function BoardListPage() {
 
   function renderCreateDialog() {
     return (
-      <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">Create new board</h3>
+      <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200 shadow-sm" role="dialog" aria-label="Create new board">
+        <h3 className="text-sm font-medium text-gray-700 mb-2" id="create-board-heading">Create new board</h3>
         <div className="flex gap-2">
+          <label htmlFor="new-board-name" className="sr-only">Board name</label>
           <input
+            id="new-board-name"
             type="text"
             value={newBoardName}
             onChange={(e) => setNewBoardName(e.target.value)}
@@ -162,7 +167,7 @@ export function BoardListPage() {
 
   function renderGrid() {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" role="list" aria-label="Your boards">
         {boards.map((board) => renderBoardCard(board))}
       </div>
     )
@@ -179,9 +184,18 @@ export function BoardListPage() {
     return (
       <div
         key={board.id}
+        role="listitem"
         data-testid="board-card"
         onClick={() => !isDeleting && setBoardId(board.id)}
-        className={`group relative p-5 bg-white rounded-lg border border-gray-200 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 ${
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && !isDeleting) {
+            e.preventDefault()
+            setBoardId(board.id)
+          }
+        }}
+        tabIndex={isDeleting ? -1 : 0}
+        aria-label={`Open board: ${board.name}, created ${createdDate}`}
+        className={`group relative p-5 bg-white rounded-lg border border-gray-200 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
           isDeleting ? 'opacity-50 pointer-events-none' : ''
         }`}
       >
@@ -194,10 +208,10 @@ export function BoardListPage() {
             e.stopPropagation()
             handleDelete(board)
           }}
-          title="Delete board"
-          className="absolute top-3 right-3 p-1.5 rounded cursor-pointer opacity-0 group-hover:opacity-100 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-all"
+          aria-label={`Delete board: ${board.name}`}
+          className="absolute top-3 right-3 p-1.5 rounded cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-all focus:outline-none focus:ring-2 focus:ring-red-400"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path
               d="M5 2V1h6v1h4v2H1V2h4zM2 5h12l-1 10H3L2 5zm4 2v6m4-6v6"
               stroke="currentColor"
