@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useUiStore } from '../../store/uiStore'
 import { useAI } from '../../hooks/useAI'
 
-const COOLDOWN_SECONDS = 5
+const COOLDOWN_SECONDS = 2
 
 export function AIChatPanel() {
   const setChatPanelOpen = useUiStore((s) => s.setChatPanelOpen)
