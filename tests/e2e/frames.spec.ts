@@ -17,7 +17,7 @@ test.describe('Frames', () => {
     await clickCanvasCenter(page)
 
     await expect(page.getByRole('button', { name: /Select/ })).toHaveClass(/bg-blue-100/)
-    await expect(page.getByTitle('Delete selected')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Delete selected' })).toBeVisible()
     await expectObjectCount(page, 1)
   })
 
@@ -44,7 +44,7 @@ test.describe('Frames', () => {
     await clickCanvasCenter(page)
     await expectObjectCount(page, 1)
 
-    const deleteBtn = page.getByTitle('Delete selected')
+    const deleteBtn = page.getByRole('button', { name: 'Delete selected' })
     await expect(deleteBtn).toBeVisible()
     await deleteBtn.click()
 

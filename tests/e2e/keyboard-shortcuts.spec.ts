@@ -13,7 +13,7 @@ test.describe('Keyboard shortcuts', () => {
   })
 
   test('Ctrl+D duplicates selected object', async ({ page }) => {
-    await page.getByRole('button', { name: /Sticky Note/ }).click()
+    await page.getByRole('button', { name: /Sticky note/i }).click()
     await clickCanvasCenter(page)
     await expectObjectCount(page, 1)
 
@@ -23,25 +23,25 @@ test.describe('Keyboard shortcuts', () => {
   })
 
   test('Ctrl+C then Ctrl+V copies and pastes', async ({ page }) => {
-    await page.getByRole('button', { name: /Sticky Note/ }).click()
+    await page.getByRole('button', { name: /Sticky note/i }).click()
     await clickCanvasCenter(page)
     await expectObjectCount(page, 1)
 
     await page.keyboard.press(`${MOD}+c`)
-    await expect(page.getByTitle('Paste (Ctrl+V)')).toBeVisible()
+    await expect(page.getByRole('button', { name: /Paste/ })).toBeVisible()
 
     await page.keyboard.press(`${MOD}+v`)
     await expectObjectCount(page, 2)
   })
 
   test('Backspace deletes selected object', async ({ page }) => {
-    await page.getByRole('button', { name: /Sticky Note/ }).click()
+    await page.getByRole('button', { name: /Sticky note/i }).click()
     await clickCanvasCenter(page)
     await expectObjectCount(page, 1)
 
     await page.keyboard.press('Backspace')
 
-    await expect(page.getByTitle('Delete selected')).not.toBeVisible()
+    await expect(page.getByRole('button', { name: 'Delete selected' })).not.toBeVisible()
     await expectObjectCount(page, 0)
   })
 })

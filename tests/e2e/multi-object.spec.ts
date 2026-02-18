@@ -18,7 +18,7 @@ test.describe('Multiple object types on one board', () => {
     if (!box) throw new Error('Canvas not found')
 
     // Create sticky note at top-left area
-    await page.getByRole('button', { name: /Sticky Note/ }).click()
+    await page.getByRole('button', { name: /Sticky note/i }).click()
     await page.mouse.click(box.x + box.width * 0.25, box.y + box.height * 0.3)
     await expectObjectCount(page, 1)
 
@@ -47,7 +47,7 @@ test.describe('Multiple object types on one board', () => {
     if (!box) throw new Error('Canvas not found')
 
     // Create two objects
-    await page.getByRole('button', { name: /Sticky Note/ }).click()
+    await page.getByRole('button', { name: /Sticky note/i }).click()
     await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.3)
 
     await page.getByRole('button', { name: /Rectangle/ }).click()
@@ -55,11 +55,11 @@ test.describe('Multiple object types on one board', () => {
 
     // Deselect
     await page.mouse.click(box.x + 10, box.y + 10)
-    await expect(page.getByTitle('Delete selected')).not.toBeVisible()
+    await expect(page.getByRole('button', { name: 'Delete selected' })).not.toBeVisible()
 
     // Select all
     await page.keyboard.press(`${MOD}+a`)
 
-    await expect(page.getByTitle('Delete selected')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Delete selected' })).toBeVisible()
   })
 })
