@@ -9,6 +9,7 @@ export function AIChatPanel() {
   const { sendPrompt, loading, error } = useAI()
   const [input, setInput] = useState('')
   const [dismissedError, setDismissedError] = useState<string | null>(null)
+  const [cooldown, setCooldown] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -27,9 +28,17 @@ export function AIChatPanel() {
     autoResize()
   }, [input, autoResize])
 
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [cooldown])
+
+  const COOLDOWN_SECONDS = 5
+
   async function handleSubmit() {
     const trimmed = input.trim()
-    if (!trimmed || loading) return
+    if (!trimmed || loading || cooldown > 0) return
 
     setInput('')
     setDismissedError(null)
@@ -39,6 +48,7 @@ export function AIChatPanel() {
     if (response) {
       addChatMessage({ role: 'assistant', content: response })
     }
+    setCooldown(COOLDOWN_SECONDS)
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -139,14 +149,14 @@ export function AIChatPanel() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask the AI..."
-            disabled={loading}
+            placeholder={cooldown > 0 ? `Wait ${cooldown}s...` : 'Ask the AI...'}
+            disabled={loading || cooldown > 0}
             rows={1}
             className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <button
             onClick={handleSubmit}
-            disabled={loading || !input.trim()}
+            disabled={loading || cooldown > 0 || !input.trim()}
             className="px-3 py-2 rounded-lg bg-blue-500 text-white text-sm cursor-pointer hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             aria-label="Send message"
           >
@@ -155,6 +165,8 @@ export function AIChatPanel() {
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
                 <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75" />
               </svg>
+            ) : cooldown > 0 ? (
+              <span className="text-xs font-mono w-4 text-center">{cooldown}</span>
             ) : (
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M3 13L8 2l5 11H3z" fill="currentColor" transform="rotate(0 8 8)" />

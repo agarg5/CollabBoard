@@ -26,6 +26,11 @@ const corsHeaders = {
 
 const MAX_TOOL_ITERATIONS = 5
 
+// In-memory rate limiting: 10 requests per 60 seconds per user
+const RATE_LIMIT_MAX = 10
+const RATE_LIMIT_WINDOW_MS = 60_000
+const rateLimitMap = new Map<string, number[]>()
+
 const SYSTEM_PROMPT = `You are an AI assistant for CollabBoard, a collaborative whiteboard app.
 You help users create and manipulate objects on the board using the provided tool functions.
 
@@ -270,6 +275,8 @@ Deno.serve(async (req) => {
     })
   }
 
+  let rateLimitKey = 'dev-bypass'
+
   if (!devBypass) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
@@ -281,7 +288,25 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+    rateLimitKey = user.id
   }
+
+  // In-memory rate limit check
+  const now = Date.now()
+  const timestamps = rateLimitMap.get(rateLimitKey) ?? []
+  const recent = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS)
+  if (recent.length >= RATE_LIMIT_MAX) {
+    const retryAfter = Math.ceil((recent[0] + RATE_LIMIT_WINDOW_MS - now) / 1000)
+    return new Response(
+      JSON.stringify({ error: `Rate limit exceeded. Try again in ${retryAfter}s.` }),
+      {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(retryAfter) },
+      },
+    )
+  }
+  recent.push(now)
+  rateLimitMap.set(rateLimitKey, recent)
 
   // Parse request body
   let body: Record<string, unknown>
