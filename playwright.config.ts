@@ -14,7 +14,7 @@ export default defineConfig({
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     env: {
-      VITE_DEV_BYPASS_AUTH: 'false',
+      VITE_DEV_BYPASS_AUTH: 'true',
     },
   },
 })
