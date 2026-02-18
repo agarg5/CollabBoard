@@ -2,8 +2,7 @@ import { create } from 'zustand'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 
-const DEV_BYPASS_AUTH =
-  import.meta.env.DEV && import.meta.env.VITE_DEV_BYPASS_AUTH === 'true'
+const DEV_BYPASS_AUTH = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true'
 
 const DEV_USER = {
   id: '00000000-0000-0000-0000-000000000000',
