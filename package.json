@@ -17,6 +17,7 @@
     "test:perf": "playwright test --project=perf",
     "test:stress": "k6 run tests/stress/concurrent-users.js",
     "test:stress:ws": "k6 run tests/stress/websocket-load.js",
+    "test:stress:presence": "k6 run tests/stress/presence.js",
     "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
