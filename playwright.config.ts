@@ -5,6 +5,20 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+  projects: [
+    {
+      name: 'default',
+      testIgnore: /perf-/,
+    },
+    {
+      name: 'perf',
+      testMatch: /perf-.*\.spec\.ts$/,
+      timeout: 120_000,
+      use: {
+        video: 'off',
+      },
+    },
+  ],
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',

@@ -107,3 +107,8 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     return newObjects
   },
 }))
+
+// Expose store on window for E2E test access (dev bypass only)
+if (import.meta.env.VITE_DEV_BYPASS_AUTH === 'true') {
+  ;(window as unknown as Record<string, unknown>).__boardStore = useBoardStore
+}

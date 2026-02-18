@@ -21,3 +21,8 @@ export const usePresenceStore = create<PresenceState>((set) => ({
     }),
   setOnlineUsers: (users) => set({ onlineUsers: users }),
 }))
+
+// Expose store on window for E2E test access (dev bypass only)
+if (import.meta.env.VITE_DEV_BYPASS_AUTH === 'true') {
+  ;(window as unknown as Record<string, unknown>).__presenceStore = usePresenceStore
+}
