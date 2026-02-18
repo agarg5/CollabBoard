@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useUiStore } from '../../store/uiStore'
 import { useAI } from '../../hooks/useAI'
 
+// Keep in sync with supabase/functions/ai-agent/index.ts
 const MAX_PROMPT_LENGTH = 2000
 
 export function AIChatPanel() {
@@ -142,7 +143,7 @@ export function AIChatPanel() {
           <textarea
             ref={textareaRef}
             value={input}
-            onChange={(e) => setInput(e.target.value.slice(0, MAX_PROMPT_LENGTH))}
+            onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask the AI..."
             disabled={loading}
