@@ -296,7 +296,13 @@ Deno.serve(async (req) => {
 
     if (name.startsWith('create')) {
       const fakeId = `__simulated_${fakeIdCounter++}`
-      simulatedObjects.push({ id: fakeId, type: name.replace('create', '').toLowerCase(), ...args })
+      const typeMap: Record<string, string> = {
+        createStickyNote: 'sticky_note',
+        createShape: (args.shapeType as string) ?? 'rectangle',
+        createFrame: 'frame',
+        createConnector: 'connector',
+      }
+      simulatedObjects.push({ id: fakeId, type: typeMap[name] ?? name.replace('create', '').toLowerCase(), ...args })
       return JSON.stringify({ created: fakeId })
     }
 
