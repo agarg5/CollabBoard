@@ -253,11 +253,18 @@ export async function executeToolCall(
   return { id: toolCall.id, result }
 }
 
+// Fields in tool call arguments that hold object IDs and should be remapped
+const ID_FIELDS = ['objectId', 'targetId', 'fromId', 'toId']
+
 /**
  * Execute an array of tool calls with ID remapping.
  * When the edge function simulates multi-step tool calls, creation tools return
  * fake IDs (e.g. __simulated_0). This function maps those fake IDs to real UUIDs
  * as objects are created, so subsequent tool calls referencing them work correctly.
+ *
+ * IMPORTANT: simulatedResults[i] corresponds positionally to toolCalls[i] (1:1).
+ * Both arrays include entries for getBoardState calls (which are skipped during
+ * execution but still occupy their index slot).
  */
 export async function executeToolCalls(
   toolCalls: AIToolCall[],
@@ -273,10 +280,19 @@ export async function executeToolCalls(
     // Skip getBoardState calls — they were only needed server-side for planning
     if (tc.function.name === 'getBoardState') continue
 
-    // Remap any fake IDs in the arguments to real ones
+    // Remap any fake IDs in known ID fields to real ones
     let rawArgs = tc.function.arguments
-    for (const [fakeId, realId] of idMap) {
-      rawArgs = rawArgs.replaceAll(fakeId, realId)
+    if (idMap.size > 0) {
+      try {
+        const parsed = JSON.parse(rawArgs) as Record<string, unknown>
+        for (const field of ID_FIELDS) {
+          const val = parsed[field]
+          if (typeof val === 'string' && idMap.has(val)) {
+            parsed[field] = idMap.get(val)
+          }
+        }
+        rawArgs = JSON.stringify(parsed)
+      } catch { console.warn('Failed to parse tool call arguments for ID remapping:', rawArgs) }
     }
     const remappedTc: AIToolCall = { ...tc, function: { ...tc.function, arguments: rawArgs } }
 
@@ -291,7 +307,9 @@ export async function executeToolCalls(
           if (sim.created) {
             idMap.set(sim.created, (result.result as { created: string }).created)
           }
-        } catch { /* ignore parse errors */ }
+        } catch {
+          console.warn('Failed to parse simulated result:', simResult)
+        }
       }
 
       if (result.result && typeof result.result === 'object' && 'error' in result.result) {
