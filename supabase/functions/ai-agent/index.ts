@@ -5,6 +5,7 @@ const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') ?? '*'
+const ALLOW_DEV_BYPASS = Deno.env.get('ALLOW_DEV_BYPASS') === 'true'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
@@ -212,7 +213,7 @@ Deno.serve(async (req) => {
   }
 
   // Verify JWT — reject unauthenticated requests (skip in dev bypass mode)
-  const devBypass = req.headers.get('X-Dev-Bypass') === 'true'
+  const devBypass = ALLOW_DEV_BYPASS && req.headers.get('X-Dev-Bypass') === 'true'
 
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
