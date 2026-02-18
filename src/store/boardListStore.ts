@@ -19,7 +19,6 @@ export const useBoardListStore = create<BoardListState>((set, get) => ({
     const { data, error } = await supabase
       .from('boards')
       .select('*')
-      .eq('created_by', userId)
       .order('created_at', { ascending: false })
 
     if (error) {

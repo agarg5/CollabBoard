@@ -35,7 +35,7 @@ describe('boardListStore', () => {
     useBoardListStore.setState({ boards: [], loading: false })
   })
 
-  it('fetchBoards loads boards for the user', async () => {
+  it('fetchBoards loads all boards', async () => {
     const boards = [makeBoard({ name: 'Board A' }), makeBoard({ name: 'Board B' })]
     const chain = chainMock({ data: boards, error: null })
     mockFrom.mockReturnValue(chain)
@@ -44,7 +44,6 @@ describe('boardListStore', () => {
 
     expect(mockFrom).toHaveBeenCalledWith('boards')
     expect(chain.select).toHaveBeenCalledWith('*')
-    expect(chain.eq).toHaveBeenCalledWith('created_by', userId)
     expect(chain.order).toHaveBeenCalledWith('created_at', { ascending: false })
     expect(useBoardListStore.getState().boards).toEqual(boards)
     expect(useBoardListStore.getState().loading).toBe(false)
