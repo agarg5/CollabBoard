@@ -259,10 +259,8 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Verify JWT — reject unauthenticated requests (skip in dev bypass mode for preview envs)
-  const origin = req.headers.get('Origin') ?? ''
-  const isPreviewOrigin = /collabboard.*\.vercel\.app$/.test(origin) || origin.includes('localhost')
-  const devBypass = ALLOW_DEV_BYPASS && req.headers.get('X-Dev-Bypass') === 'true' && isPreviewOrigin
+  // Verify JWT — reject unauthenticated requests (skip in dev bypass mode)
+  const devBypass = ALLOW_DEV_BYPASS && req.headers.get('X-Dev-Bypass') === 'true'
 
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
