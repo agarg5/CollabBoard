@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { setupBoard, cleanupBoard, getCanvas } from './helpers'
+import { setupBoard, cleanupBoard, getCanvas, expectObjectCount, MOD } from './helpers'
 
 test.describe('Multiple object types on one board', () => {
   let boardName: string
@@ -20,14 +20,15 @@ test.describe('Multiple object types on one board', () => {
     // Create sticky note at top-left area
     await page.getByRole('button', { name: /Sticky Note/ }).click()
     await page.mouse.click(box.x + box.width * 0.25, box.y + box.height * 0.3)
+    await expectObjectCount(page, 1)
 
     // Deselect
     await page.mouse.click(box.x + 10, box.y + 10)
-    await expect(page.getByTitle('Delete selected')).not.toBeVisible()
 
     // Create rectangle at center
     await page.getByRole('button', { name: /Rectangle/ }).click()
     await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.5)
+    await expectObjectCount(page, 2)
 
     // Deselect
     await page.mouse.click(box.x + 10, box.y + 10)
@@ -36,8 +37,8 @@ test.describe('Multiple object types on one board', () => {
     await page.getByRole('button', { name: /Circle/ }).click()
     await page.mouse.click(box.x + box.width * 0.75, box.y + box.height * 0.7)
 
-    // After creating all three, tool should be back to Select
     await expect(page.getByRole('button', { name: /Select/ })).toHaveClass(/bg-blue-100/)
+    await expectObjectCount(page, 3)
   })
 
   test('select all objects with Ctrl+A', async ({ page }) => {
@@ -56,8 +57,8 @@ test.describe('Multiple object types on one board', () => {
     await page.mouse.click(box.x + 10, box.y + 10)
     await expect(page.getByTitle('Delete selected')).not.toBeVisible()
 
-    // Select all with Ctrl+A
-    await page.keyboard.press('Meta+a')
+    // Select all
+    await page.keyboard.press(`${MOD}+a`)
 
     await expect(page.getByTitle('Delete selected')).toBeVisible()
   })

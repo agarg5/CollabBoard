@@ -8,28 +8,19 @@ test.describe('Auth bypass and board list', () => {
     await expect(page.getByText('dev@collabboard.local')).toBeVisible()
   })
 
-  test('shows empty state when no boards exist', async ({ page }) => {
-    await page.goto('/')
-    await expect(page.getByText('My Boards')).toBeVisible()
-    const hasBoardsOrEmpty = await Promise.race([
-      page
-        .getByText('No boards yet')
-        .waitFor({ timeout: 3000 })
-        .then(() => 'empty'),
-      page
-        .locator('.grid > div')
-        .first()
-        .waitFor({ timeout: 3000 })
-        .then(() => 'has-boards'),
-    ]).catch(() => 'empty')
-    expect(['empty', 'has-boards']).toContain(hasBoardsOrEmpty)
-  })
-
   test('can create and delete a board', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByText('My Boards')).toBeVisible()
 
+    // Count existing boards
+    const countBefore = await page.getByTestId('board-card').count()
+
+    // Create a board
     const boardName = await createBoard(page, 'E2E Create-Delete')
+    expect(await page.getByTestId('board-card').count()).toBe(countBefore + 1)
+
+    // Delete the board
     await deleteBoard(page, boardName)
+    expect(await page.getByTestId('board-card').count()).toBe(countBefore)
   })
 })

@@ -1,5 +1,8 @@
 import { expect, type Page } from '@playwright/test'
 
+/** Platform-aware modifier key: Meta on macOS, Control on Linux/Windows. */
+export const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
+
 /** Create a board from the board list page and return its name. */
 export async function createBoard(page: Page, prefix = 'E2E'): Promise<string> {
   const boardName = `${prefix} ${Date.now()}`
@@ -13,11 +16,14 @@ export async function createBoard(page: Page, prefix = 'E2E'): Promise<string> {
 /** Delete a board by name from the board list page (handles the confirm dialog). */
 export async function deleteBoard(page: Page, boardName: string) {
   page.once('dialog', (dialog) => dialog.accept())
-  const boardCard = page.locator('.group').filter({ hasText: boardName })
+  // Use .first() in case duplicate-named boards exist from previous failed runs
+  const boardCard = page.getByTestId('board-card').filter({ hasText: boardName }).first()
   await boardCard.hover()
   await boardCard.getByTitle('Delete board').click()
-  await expect(page.getByText(boardName)).not.toBeVisible({ timeout: 5000 })
+  // Wait for at least one instance to disappear (card count should decrease)
+  await expect(boardCard).not.toBeVisible({ timeout: 5000 })
 }
+
 
 /** Open a board by clicking its card. Waits for canvas toolbar to appear. */
 export async function openBoard(page: Page, boardName: string) {
@@ -61,4 +67,44 @@ export async function cleanupBoard(page: Page, boardName: string) {
     .catch(() => false)
   if (onCanvas) await goBackToBoardList(page)
   await deleteBoard(page, boardName)
+}
+
+/** Get the number of objects on the board from the Zustand store (exposed in test mode). */
+export async function getObjectCount(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const store = (window as unknown as Record<string, { getState: () => { objects: unknown[] } }>).__boardStore
+    return store ? store.getState().objects.length : -1
+  })
+}
+
+/** Assert object count with polling (retries until timeout). Use for assertions after async actions. */
+export async function expectObjectCount(page: Page, expected: number, timeout = 3000) {
+  await expect(async () => {
+    const count = await getObjectCount(page)
+    expect(count).toBe(expected)
+  }).toPass({ timeout })
+}
+
+/** Get the number of selected objects from the Zustand store. */
+export async function getSelectedCount(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const store = (window as unknown as Record<string, { getState: () => { selectedIds: string[] } }>).__boardStore
+    return store ? store.getState().selectedIds.length : -1
+  })
+}
+
+/** Get the current stage position from the UI store. */
+export async function getStagePosition(page: Page): Promise<{ x: number; y: number }> {
+  return page.evaluate(() => {
+    const store = (window as unknown as Record<string, { getState: () => { stagePosition: { x: number; y: number } } }>).__uiStore
+    return store ? store.getState().stagePosition : { x: 0, y: 0 }
+  })
+}
+
+/** Get the current stage scale from the UI store. */
+export async function getStageScale(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const store = (window as unknown as Record<string, { getState: () => { stageScale: number } }>).__uiStore
+    return store ? store.getState().stageScale : 1
+  })
 }
