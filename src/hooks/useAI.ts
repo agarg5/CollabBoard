@@ -5,6 +5,8 @@ import { executeToolCall } from '../lib/aiExecutor'
 import type { AIResponse } from '../types/board'
 
 const AI_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-agent`
+const DEV_BYPASS_AUTH = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true'
+const DEV_USER_ID = '00000000-0000-0000-0000-000000000000'
 
 export function useAI() {
   const [loading, setLoading] = useState(false)
@@ -21,24 +23,38 @@ export function useAI() {
       return null
     }
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    if (!session) {
-      setError('Not authenticated')
-      setLoading(false)
-      return null
+    let accessToken: string | null = null
+    let userId: string = DEV_USER_ID
+
+    if (!DEV_BYPASS_AUTH) {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!session) {
+        setError('Not authenticated')
+        setLoading(false)
+        return null
+      }
+      accessToken = session.access_token
+      userId = session.user.id
     }
 
     const boardState = useBoardStore.getState().objects
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (DEV_BYPASS_AUTH) {
+      headers['Authorization'] = `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+      headers['X-Dev-Bypass'] = 'true'
+    } else {
+      headers['Authorization'] = `Bearer ${accessToken}`
+    }
 
     try {
       const res = await fetch(AI_FUNCTION_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers,
         body: JSON.stringify({ prompt, boardState }),
       })
 
@@ -56,7 +72,7 @@ export function useAI() {
         try {
           const result = await executeToolCall(toolCall, {
             boardId,
-            userId: session.user.id,
+            userId,
           })
           if (result.result && typeof result.result === 'object' && 'error' in result.result) {
             errors.push(`${toolCall.function.name}: ${(result.result as { error: string }).error}`)

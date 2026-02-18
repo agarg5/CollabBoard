@@ -1,14 +1,25 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { traceable } from 'npm:langsmith@0.3/traceable'
+
+interface OpenAIResponse {
+  choices?: Array<{ message: { content: string; tool_calls?: unknown[] } }>
+}
+
+interface ChatMessage {
+  role: string
+  content: string
+}
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') ?? '*'
+const ALLOW_DEV_BYPASS = Deno.env.get('ALLOW_DEV_BYPASS') === 'true'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-dev-bypass',
 }
 
 const SYSTEM_PROMPT = `You are an AI assistant for CollabBoard, a collaborative whiteboard app.
@@ -199,6 +210,33 @@ const TOOLS = [
   },
 ]
 
+const callOpenAI = traceable(
+  async (params: { messages: ChatMessage[]; tools: typeof TOOLS }) => {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: params.messages,
+        tools: params.tools,
+        tool_choice: 'auto',
+        temperature: 0.7,
+      }),
+    })
+
+    if (!res.ok) {
+      const errorBody = await res.text()
+      throw new Error(`OpenAI API error ${res.status}: ${errorBody}`)
+    }
+
+    return res.json() as Promise<OpenAIResponse>
+  },
+  { name: 'ai-agent-completion', run_type: 'llm' },
+)
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -211,7 +249,9 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Verify JWT — reject unauthenticated requests
+  // Verify JWT — reject unauthenticated requests (skip in dev bypass mode)
+  const devBypass = ALLOW_DEV_BYPASS && req.headers.get('X-Dev-Bypass') === 'true'
+
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
     return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
@@ -220,15 +260,17 @@ Deno.serve(async (req) => {
     })
   }
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  })
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) {
-    return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  if (!devBypass) {
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
     })
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
   }
 
   // Parse request body
@@ -267,31 +309,17 @@ Deno.serve(async (req) => {
     { role: 'user', content: prompt },
   ]
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages,
-      tools: TOOLS,
-      tool_choice: 'auto',
-      temperature: 0.7,
-    }),
-  })
-
-  if (!response.ok) {
-    const errorBody = await response.text()
-    console.error('OpenAI API error:', response.status, errorBody)
+  let data: OpenAIResponse
+  try {
+    data = await callOpenAI({ messages, tools: TOOLS })
+  } catch (err) {
+    console.error('OpenAI API error:', err)
     return new Response(JSON.stringify({ error: 'AI request failed' }), {
       status: 502,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 
-  const data = await response.json()
   const choice = data.choices?.[0]
 
   if (!choice) {

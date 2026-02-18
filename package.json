@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test --project=default",
+    "test:e2e:headed": "playwright test --headed",
     "test:perf": "playwright test --project=perf",
     "test:stress": "k6 run tests/stress/concurrent-users.js",
     "test:stress:ws": "k6 run tests/stress/websocket-load.js",
