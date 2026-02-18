@@ -3,7 +3,7 @@ import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 
 const DEV_BYPASS_AUTH =
-  import.meta.env.DEV && import.meta.env.VITE_DEV_BYPASS_AUTH === 'true'
+  import.meta.env.VITE_DEV_BYPASS_AUTH === 'true'
 
 function getDevUser(): User {
   const overrideId =
