@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { traceable } from 'npm:langsmith@0.3/traceable'
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -267,32 +268,46 @@ Deno.serve(async (req) => {
     { role: 'user', content: prompt },
   ]
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages,
-      tools: TOOLS,
-      tool_choice: 'auto',
-      temperature: 0.7,
-    }),
-  })
+  const callOpenAI = traceable(
+    async (params: { messages: typeof messages; tools: typeof TOOLS }) => {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: params.messages,
+          tools: params.tools,
+          tool_choice: 'auto',
+          temperature: 0.7,
+        }),
+      })
 
-  if (!response.ok) {
-    const errorBody = await response.text()
-    console.error('OpenAI API error:', response.status, errorBody)
+      if (!res.ok) {
+        const errorBody = await res.text()
+        throw new Error(`OpenAI API error ${res.status}: ${errorBody}`)
+      }
+
+      return res.json()
+    },
+    { name: 'ai-agent-completion', run_type: 'llm' },
+  )
+
+  let data: Record<string, unknown>
+  try {
+    data = await callOpenAI({ messages, tools: TOOLS })
+  } catch (err) {
+    console.error('OpenAI API error:', err)
     return new Response(JSON.stringify({ error: 'AI request failed' }), {
       status: 502,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 
-  const data = await response.json()
-  const choice = data.choices?.[0]
+  const choices = data.choices as Array<{ message: { content: string; tool_calls?: unknown[] } }> | undefined
+  const choice = choices?.[0]
 
   if (!choice) {
     return new Response(JSON.stringify({ error: 'No response from AI' }), {
