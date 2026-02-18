@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Stage } from 'react-konva'
+import { Stage, Layer } from 'react-konva'
 import type Konva from 'konva'
 import { useUiStore } from '../../store/uiStore'
 import { useBoardStore } from '../../store/boardStore'
@@ -8,6 +8,7 @@ import { BackgroundGrid } from './BackgroundGrid'
 import { ObjectLayer } from './ObjectLayer'
 import { CursorLayer } from './CursorLayer'
 import { TextEditor } from './TextEditor'
+import { ConnectorPreview } from './ConnectorPreview'
 import { calculateZoom } from './zoomHelper'
 import { insertObject, deleteObject } from '../../lib/boardSync'
 import type { BoardObject, ObjectType } from '../../types/board'
@@ -24,6 +25,12 @@ export interface SelectionRect {
   y: number
   width: number
   height: number
+}
+
+interface ConnectorStart {
+  x: number
+  y: number
+  objectId?: string
 }
 
 export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
@@ -47,6 +54,10 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
   // so the subsequent click event can be suppressed without setTimeout.
   const interactionStartedRef = useRef(false)
 
+  // Connector two-click state
+  const connectorStartRef = useRef<ConnectorStart | null>(null)
+  const [connectorPreview, setConnectorPreview] = useState<{ start: { x: number; y: number }; end: { x: number; y: number } } | null>(null)
+
   const tool = useUiStore((s) => s.tool)
   const setTool = useUiStore((s) => s.setTool)
   const stagePosition = useUiStore((s) => s.stagePosition)
@@ -63,11 +74,29 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
     setSelectionRect(rect)
   }
 
-  // Keyboard: delete, spacebar, Ctrl/Cmd+A
+  // Reset connector state when tool changes away from connector
+  useEffect(() => {
+    if (tool !== 'connector') {
+      connectorStartRef.current = null
+      setConnectorPreview(null)
+    }
+  }, [tool])
+
+  // Keyboard: delete, spacebar, Ctrl/Cmd+A, Escape
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const editing = useUiStore.getState().editingId !== null
       if (editing) return
+
+      if (e.key === 'Escape') {
+        // Cancel connector creation if in progress
+        if (connectorStartRef.current) {
+          connectorStartRef.current = null
+          setConnectorPreview(null)
+          return
+        }
+        return
+      }
 
       const mod = e.metaKey || e.ctrlKey
 
@@ -178,6 +207,30 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
     return target === stage || (target.getParent() === stage && target.nodeType === 'Layer')
   }
 
+  /** Walk up from the clicked target to find a board object Group (by id). */
+  function findTargetObjectId(target: Konva.Node): string | null {
+    let node: Konva.Node | null = target
+    const objects = useBoardStore.getState().objects
+    const objectIds = new Set(objects.map((o) => o.id))
+    while (node) {
+      const id = node.id()
+      if (id && objectIds.has(id)) {
+        // Don't snap to other connectors
+        const obj = objects.find((o) => o.id === id)
+        if (obj && obj.type !== 'connector') return id
+        return null
+      }
+      node = node.getParent()
+    }
+    return null
+  }
+
+  function getObjectCenter(objectId: string): { x: number; y: number } | null {
+    const obj = useBoardStore.getState().objects.find((o) => o.id === objectId)
+    if (!obj) return null
+    return { x: obj.x + obj.width / 2, y: obj.y + obj.height / 2 }
+  }
+
   const handleMouseDown = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
       const stage = e.target.getStage()
@@ -254,6 +307,14 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
           height: Math.abs(worldY - startY),
         })
       }
+
+      // Update connector rubber-band preview
+      if (connectorStartRef.current) {
+        setConnectorPreview({
+          start: { x: connectorStartRef.current.x, y: connectorStartRef.current.y },
+          end: { x: worldX, y: worldY },
+        })
+      }
     },
     [broadcastCursor],
   )
@@ -310,6 +371,89 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
       target === stage || (target.getParent() === stage && target.nodeType === 'Layer')
 
     if (tool === 'hand') return
+
+    // Connector two-click flow
+    if (tool === 'connector' && stage) {
+      const pointer = stage.getPointerPosition()
+      if (!pointer) return
+
+      const { stagePosition: pos, stageScale: scale } = useUiStore.getState()
+      const worldX = (pointer.x - pos.x) / scale
+      const worldY = (pointer.y - pos.y) / scale
+
+      const hitObjectId = findTargetObjectId(e.target as Konva.Node)
+
+      if (!connectorStartRef.current) {
+        // First click — set start
+        let startX = worldX
+        let startY = worldY
+        let startObjectId: string | undefined
+
+        if (hitObjectId) {
+          const center = getObjectCenter(hitObjectId)
+          if (center) {
+            startX = center.x
+            startY = center.y
+          }
+          startObjectId = hitObjectId
+        }
+
+        connectorStartRef.current = { x: startX, y: startY, objectId: startObjectId }
+        setConnectorPreview({
+          start: { x: startX, y: startY },
+          end: { x: worldX, y: worldY },
+        })
+        return
+      }
+
+      // Second click — create connector
+      let endX = worldX
+      let endY = worldY
+      let endObjectId: string | undefined
+
+      if (hitObjectId && hitObjectId !== connectorStartRef.current.objectId) {
+        const center = getObjectCenter(hitObjectId)
+        if (center) {
+          endX = center.x
+          endY = center.y
+        }
+        endObjectId = hitObjectId
+      }
+
+      const start = connectorStartRef.current
+      const { boardId, objects } = useBoardStore.getState()
+      if (!boardId) return
+
+      const userId = getValidUserId()
+      const newObj: BoardObject = {
+        id: crypto.randomUUID(),
+        board_id: boardId,
+        type: 'connector',
+        properties: {
+          strokeColor: '#1e293b',
+          strokeWidth: 2,
+          ...(start.objectId ? { startObjectId: start.objectId } : {}),
+          ...(endObjectId ? { endObjectId } : {}),
+        },
+        x: start.x,
+        y: start.y,
+        width: endX - start.x,
+        height: endY - start.y,
+        z_index: objects.reduce((max, o) => Math.max(max, o.z_index), 0) + 1,
+        created_by: userId,
+        updated_at: new Date().toISOString(),
+      }
+
+      addObject(newObj)
+      insertObject(newObj)
+      setSelectedIds([newObj.id])
+
+      // Reset connector state
+      connectorStartRef.current = null
+      setConnectorPreview(null)
+      setTool('select')
+      return
+    }
 
     if (CREATION_TOOLS.has(tool) && stage && (tool === 'text' || clickedOnEmpty)) {
       const pointer = stage.getPointerPosition()
@@ -374,7 +518,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
 
   function getCursorClass(): string {
     if (tool === 'hand' || isSpaceHeld) return 'cursor-grab'
-    if (CREATION_TOOLS.has(tool)) return 'cursor-crosshair'
+    if (CREATION_TOOLS.has(tool) || tool === 'connector') return 'cursor-crosshair'
     return 'cursor-default'
   }
 
@@ -403,6 +547,11 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
             scale={stageScale}
           />
           <ObjectLayer selectionRect={selectionRect} />
+          {connectorPreview && (
+            <Layer listening={false}>
+              <ConnectorPreview start={connectorPreview.start} end={connectorPreview.end} />
+            </Layer>
+          )}
           <CursorLayer />
         </Stage>
       )}

@@ -20,6 +20,10 @@ const SHAPE_COLORS = [
   { name: 'Gray', value: '#6b7280' },
 ]
 
+const STROKE_ONLY_TYPES = new Set(['line', 'connector'])
+const FILLED_SHAPE_TYPES = new Set(['rectangle', 'circle'])
+
+
 function getMultiSelectColorInfo(selectedIds: string[], objects: BoardObject[]) {
   if (selectedIds.length === 0) return null
 
@@ -30,17 +34,17 @@ function getMultiSelectColorInfo(selectedIds: string[], objects: BoardObject[]) 
 
   // All sticky notes
   if (types.size === 1 && types.has('sticky_note')) {
-    return { palette: STICKY_COLORS, colorKey: 'color' as const, isShape: false, isLine: false }
+    return { palette: STICKY_COLORS, colorKey: 'color' as const, isShape: false, isStrokeOnly: false }
   }
 
-  // All lines — use strokeColor instead of fillColor
-  if (types.size === 1 && types.has('line')) {
-    return { palette: SHAPE_COLORS, colorKey: 'strokeColor' as const, isShape: true, isLine: true }
+  // All stroke-only types (line, connector)
+  if ([...types].every((t) => STROKE_ONLY_TYPES.has(t))) {
+    return { palette: SHAPE_COLORS, colorKey: 'strokeColor' as const, isShape: true, isStrokeOnly: true }
   }
 
-  // All filled shapes (rectangle/circle) — no lines mixed in
-  if ([...types].every((t) => t === 'rectangle' || t === 'circle')) {
-    return { palette: SHAPE_COLORS, colorKey: 'fillColor' as const, isShape: true, isLine: false }
+  // All filled shapes (rectangle/circle)
+  if ([...types].every((t) => FILLED_SHAPE_TYPES.has(t))) {
+    return { palette: SHAPE_COLORS, colorKey: 'fillColor' as const, isShape: true, isStrokeOnly: false }
   }
 
   return null
@@ -76,7 +80,7 @@ export function Toolbar() {
     const selectedObjs = objects.filter((o) => selectedIds.includes(o.id))
     for (const obj of selectedObjs) {
       let properties: Record<string, unknown>
-      if (colorInfo.isLine) {
+      if (colorInfo.isStrokeOnly) {
         properties = { ...obj.properties, strokeColor: color }
       } else if (colorInfo.isShape) {
         properties = { ...obj.properties, fillColor: color }
@@ -242,6 +246,35 @@ export function Toolbar() {
           />
         </svg>
         Line
+      </button>
+      <button
+        onClick={() => setTool('connector')}
+        className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
+          tool === 'connector' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+        }`}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          className="inline-block mr-1 -mt-0.5"
+        >
+          <path
+            d="M3 13L13 3"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+          <path
+            d="M13 3L9 3M13 3L13 7"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        Connector
       </button>
       <button
         onClick={() => setTool('text')}
