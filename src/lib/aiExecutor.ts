@@ -80,7 +80,7 @@ const toolHandlers: Record<string, ToolHandler> = {
     }
     const obj = buildObject(
       {
-        type: shapeType,
+        type: shapeType as 'rectangle' | 'circle',
         x: args.x as number,
         y: args.y as number,
         width: (args.width as number) ?? 150,
