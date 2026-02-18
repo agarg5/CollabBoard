@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useUiStore } from '../../store/uiStore'
 import { useAI } from '../../hooks/useAI'
 
+const COOLDOWN_SECONDS = 5
+
 export function AIChatPanel() {
   const setChatPanelOpen = useUiStore((s) => s.setChatPanelOpen)
   const messages = useUiStore((s) => s.chatMessages)
@@ -33,8 +35,6 @@ export function AIChatPanel() {
     const timer = setTimeout(() => setCooldown((c) => c - 1), 1000)
     return () => clearTimeout(timer)
   }, [cooldown])
-
-  const COOLDOWN_SECONDS = 5
 
   async function handleSubmit() {
     const trimmed = input.trim()

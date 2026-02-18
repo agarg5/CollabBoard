@@ -275,7 +275,7 @@ Deno.serve(async (req) => {
     })
   }
 
-  let rateLimitKey = 'dev-bypass'
+  let rateLimitKey: string | null = null
 
   if (!devBypass) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -291,22 +291,27 @@ Deno.serve(async (req) => {
     rateLimitKey = user.id
   }
 
-  // In-memory rate limit check
-  const now = Date.now()
-  const timestamps = rateLimitMap.get(rateLimitKey) ?? []
-  const recent = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS)
-  if (recent.length >= RATE_LIMIT_MAX) {
-    const retryAfter = Math.ceil((recent[0] + RATE_LIMIT_WINDOW_MS - now) / 1000)
-    return new Response(
-      JSON.stringify({ error: `Rate limit exceeded. Try again in ${retryAfter}s.` }),
-      {
-        status: 429,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(retryAfter) },
-      },
-    )
+  // In-memory rate limit check (skipped for dev-bypass)
+  if (rateLimitKey) {
+    const now = Date.now()
+    const timestamps = rateLimitMap.get(rateLimitKey) ?? []
+    const recent = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS)
+    if (recent.length === 0) {
+      rateLimitMap.delete(rateLimitKey)
+    }
+    if (recent.length >= RATE_LIMIT_MAX) {
+      const retryAfter = Math.ceil((recent[0] + RATE_LIMIT_WINDOW_MS - now) / 1000)
+      return new Response(
+        JSON.stringify({ error: `Rate limit exceeded. Try again in ${retryAfter}s.` }),
+        {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(retryAfter) },
+        },
+      )
+    }
+    recent.push(now)
+    rateLimitMap.set(rateLimitKey, recent)
   }
-  recent.push(now)
-  rateLimitMap.set(rateLimitKey, recent)
 
   // Parse request body
   let body: Record<string, unknown>
