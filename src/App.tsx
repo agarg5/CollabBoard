@@ -10,11 +10,14 @@ import { BoardListPage } from './components/ui/BoardListPage'
 import { Toolbar } from './components/ui/Toolbar'
 import { PresencePanel } from './components/ui/PresencePanel'
 import { ConnectionStatus } from './components/ui/ConnectionStatus'
+import { AIChatPanel } from './components/ui/AIChatPanel'
+import { useUiStore } from './store/uiStore'
 import './App.css'
 
 function BoardView({ boardId }: { boardId: string }) {
   const { user, signOut } = useAuthStore()
   const setBoardId = useBoardStore((s) => s.setBoardId)
+  const chatPanelOpen = useUiStore((s) => s.chatPanelOpen)
 
   const channel = useBoardChannel(boardId)
   useRealtimeSync(boardId)
@@ -46,7 +49,10 @@ function BoardView({ boardId }: { boardId: string }) {
         </div>
       </div>
       <Toolbar />
-      <BoardCanvas broadcastCursor={broadcastCursor} />
+      <div className="flex flex-1 min-h-0">
+        <BoardCanvas broadcastCursor={broadcastCursor} />
+        {chatPanelOpen && <AIChatPanel />}
+      </div>
     </div>
   )
 }

@@ -53,6 +53,8 @@ function getMultiSelectColorInfo(selectedIds: string[], objects: BoardObject[]) 
 export function Toolbar() {
   const tool = useUiStore((s) => s.tool)
   const setTool = useUiStore((s) => s.setTool)
+  const chatPanelOpen = useUiStore((s) => s.chatPanelOpen)
+  const setChatPanelOpen = useUiStore((s) => s.setChatPanelOpen)
   const selectedIds = useBoardStore((s) => s.selectedIds)
   const objects = useBoardStore((s) => s.objects)
   const updateObject = useBoardStore((s) => s.updateObject)
@@ -401,6 +403,33 @@ export function Toolbar() {
           ))}
         </>
       )}
+
+      <div className="ml-auto flex items-center">
+        <div className="w-px h-6 bg-gray-300 mx-1" />
+        <button
+          title="AI Assistant"
+          onClick={() => setChatPanelOpen(!chatPanelOpen)}
+          className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
+            chatPanelOpen ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+          }`}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            className="inline-block mr-1 -mt-0.5"
+          >
+            <path
+              d="M8 1l1.5 3.5L13 6l-3 2.5L11 12l-3-2-3 2 1-3.5L3 6l3.5-1.5z"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinejoin="round"
+            />
+          </svg>
+          AI
+        </button>
+      </div>
     </div>
   )
 }
