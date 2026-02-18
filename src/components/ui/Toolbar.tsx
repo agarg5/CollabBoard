@@ -407,6 +407,7 @@ export function Toolbar() {
       <div className="ml-auto flex items-center">
         <div className="w-px h-6 bg-gray-300 mx-1" />
         <button
+          data-testid="ai-assistant-btn"
           title="AI Assistant"
           onClick={() => setChatPanelOpen(!chatPanelOpen)}
           className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${

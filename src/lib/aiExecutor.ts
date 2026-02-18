@@ -292,7 +292,7 @@ export async function executeToolCalls(
           }
         }
         rawArgs = JSON.stringify(parsed)
-      } catch { /* leave rawArgs unchanged if parse fails */ }
+      } catch { console.warn('Failed to parse tool call arguments for ID remapping:', rawArgs) }
     }
     const remappedTc: AIToolCall = { ...tc, function: { ...tc.function, arguments: rawArgs } }
 

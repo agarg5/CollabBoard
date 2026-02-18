@@ -24,7 +24,6 @@ export async function deleteBoard(page: Page, boardName: string) {
   await expect(boardCard).not.toBeVisible({ timeout: 5000 })
 }
 
-
 /** Open a board by clicking its card. Waits for canvas toolbar to appear. */
 export async function openBoard(page: Page, boardName: string) {
   await page.getByText(boardName).click()
