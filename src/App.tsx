@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Routes, Route, useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { useBoardStore } from './store/boardStore'
 import { useBoardChannel } from './hooks/useBoardChannel'
@@ -16,23 +17,36 @@ import { AccountSettings } from './components/ui/AccountSettings'
 import { useUiStore } from './store/uiStore'
 import './App.css'
 
-function BoardView({ boardId }: { boardId: string }) {
+function BoardView() {
+  const { boardId } = useParams<{ boardId: string }>()
+  const navigate = useNavigate()
   const { user, signOut } = useAuthStore()
   const setBoardId = useBoardStore((s) => s.setBoardId)
   const chatPanelOpen = useUiStore((s) => s.chatPanelOpen)
   const showAccountSettings = useUiStore((s) => s.showAccountSettings)
   const setShowAccountSettings = useUiStore((s) => s.setShowAccountSettings)
 
-  const channel = useBoardChannel(boardId)
-  useRealtimeSync(boardId)
+  useEffect(() => {
+    if (boardId) setBoardId(boardId)
+    return () => setBoardId(null)
+  }, [boardId, setBoardId])
+
+  const channel = useBoardChannel(boardId!)
+  useRealtimeSync(boardId!)
   const { broadcastCursor } = usePresenceCursors(channel)
+
+  function handleBackToBoards() {
+    navigate('/')
+  }
+
+  if (!boardId) return null
 
   return (
     <div className="flex flex-col w-screen h-screen">
       <header className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setBoardId(null)}
+            onClick={handleBackToBoards}
             aria-label="Back to boards"
             className="px-3 py-1.5 text-sm cursor-pointer rounded hover:bg-gray-100 transition-colors"
           >
@@ -70,21 +84,24 @@ function BoardView({ boardId }: { boardId: string }) {
 }
 
 function AuthenticatedApp() {
-  const boardId = useBoardStore((s) => s.boardId)
   const setShowAccountSettings = useUiStore((s) => s.setShowAccountSettings)
+  const navigate = useNavigate()
 
   useEffect(() => {
     setShowAccountSettings(false)
-  }, [boardId, setShowAccountSettings])
+  }, [navigate, setShowAccountSettings])
 
-  if (!boardId) return <BoardListPage />
-  return <BoardView boardId={boardId} />
+  return (
+    <Routes>
+      <Route path="/" element={<BoardListPage />} />
+      <Route path="/board/:boardId" element={<BoardView />} />
+    </Routes>
+  )
 }
 
 function App() {
   const { user, loading, initialize } = useAuthStore()
   const [recoveryMode, setRecoveryMode] = useState(() => {
-    // Detect recovery token in URL hash on fresh page load
     const hash = window.location.hash
     return hash.includes('type=recovery')
   })
