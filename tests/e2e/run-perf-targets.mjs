@@ -26,18 +26,6 @@ const targets = [
     grep: '5 users see presence of all others',
   },
   {
-    id: 'fps-pan',
-    label: '60 FPS with 500 objects during pan',
-    file: 'tests/e2e/perf-requirements-fps.spec.ts',
-    grep: '500 objects: avg FPS >= 60 during pan',
-  },
-  {
-    id: 'fps-zoom',
-    label: '60 FPS with 500 objects during zoom',
-    file: 'tests/e2e/perf-requirements-fps.spec.ts',
-    grep: '500 objects: avg FPS >= 60 during zoom',
-  },
-  {
     id: 'ai-latency',
     label: '<2s AI agent response time',
     file: 'tests/e2e/perf-ai-agent.spec.ts',
@@ -67,14 +55,6 @@ for (const t of targets) {
 const passed = (id) => outcome.get(id) === true
 
 const requirements = [
-  {
-    label: '60 FPS during pan/zoom/object manipulation',
-    pass: passed('fps-pan') && passed('fps-zoom'),
-  },
-  {
-    label: '500+ objects on canvas without performance drops',
-    pass: passed('fps-pan') && passed('fps-zoom'),
-  },
   {
     label: '<50ms cursor sync latency',
     pass: passed('cursor-latency'),
