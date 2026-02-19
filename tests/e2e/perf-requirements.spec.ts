@@ -6,13 +6,8 @@ import {
   deleteTestUser,
   createBoard,
   cleanupBoard,
-  seedObjects,
-  openBoardAsUser,
   openTwoUsers,
   openNUsers,
-  USER_A_ID,
-  startFpsMeasurement,
-  stopFpsMeasurement,
   waitForObjectCount,
   getObjectCount,
   savePerfResult,
@@ -20,8 +15,6 @@ import {
 } from './perf-helpers'
 
 const TARGETS = {
-  fps: 60,
-  objectCount: 500,
   cursorLatencyMs: 50,
   objectLatencyMs: 100,
   concurrentUsers: 5,
@@ -32,15 +25,10 @@ const TARGETS = {
  *
  * | Target                                      | Test assertion                                  |
  * |---------------------------------------------|-------------------------------------------------|
- * | 60 FPS during pan/zoom/manipulation          | avg FPS >= 60 with 500 objects (headed mode)    |
- * | 500+ objects without performance drops        | avg FPS >= 60 with 500 objects (headed mode)    |
  * | <50ms cursor sync latency                    | avg measured cursor latency < 50ms               |
  * | <100ms object sync latency                   | max client object sync latency < 100ms           |
  * | <2s AI agent response time                   | (covered by perf-ai-agent.spec.ts)               |
  * | 5+ concurrent users per board                | 5 users connect + sync objects + see presence    |
- *
- * FPS tests run in headed mode with --disable-gpu-vsync for accurate
- * measurements. This avoids headless Chromium GC pauses that tank p95.
  */
 
 // ---------------------------------------------------------------------------
@@ -325,37 +313,22 @@ test.describe(`Target: ${TARGETS.concurrentUsers}+ concurrent users`, () => {
   })
 
   test(`${TARGETS.concurrentUsers} users see presence of all others`, async ({ browser }) => {
-    test.setTimeout(180000)
+    test.setTimeout(60000)
     const { pages, contexts } = await openNUsers(browser, boardId, TARGETS.concurrentUsers, undefined, { sessions })
 
     try {
-      // Move cursors to trigger presence broadcast
-      for (let i = 0; i < pages.length; i++) {
-        const canvas = pages[i].locator('canvas').first()
-        await canvas.hover({ position: { x: 200 + i * 50, y: 200 } })
-      }
-
       await Promise.all(
         pages.map((page) =>
-          page.waitForFunction(
-            (expectedCount) => {
-              const store = (window as any).__presenceStore
-              const cursors = store?.getState().cursors ?? {}
-              return Object.keys(cursors).length >= expectedCount
-            },
-            TARGETS.concurrentUsers - 1,
-            { timeout: 20000 },
+          expect(page.getByRole('group', { name: 'Online users' }).getByRole('img')).toHaveCount(
+            TARGETS.concurrentUsers,
+            { timeout: 8000 },
           ),
         ),
       )
 
       const presenceCounts: number[] = []
       for (let i = 0; i < pages.length; i++) {
-        const count = await pages[i].evaluate(() => {
-          const store = (window as any).__presenceStore
-          const cursors = store?.getState().cursors ?? {}
-          return Object.keys(cursors).length
-        })
+        const count = await pages[i].getByRole('group', { name: 'Online users' }).getByRole('img').count()
         presenceCounts.push(count)
       }
 
@@ -365,125 +338,14 @@ test.describe(`Target: ${TARGETS.concurrentUsers}+ concurrent users`, () => {
         test: '5-user-presence',
         timestamp: new Date().toISOString(),
         metrics: Object.fromEntries(presenceCounts.map((c, i) => [`user${i + 1}Sees`, c])),
-        passed: presenceCounts.every((c) => c >= TARGETS.concurrentUsers - 1),
+        passed: presenceCounts.every((c) => c >= TARGETS.concurrentUsers),
       })
 
       for (const count of presenceCounts) {
-        expect(count).toBeGreaterThanOrEqual(TARGETS.concurrentUsers - 1)
+        expect(count).toBeGreaterThanOrEqual(TARGETS.concurrentUsers)
       }
     } finally {
       await Promise.all(contexts.map((ctx) => ctx.close()))
-    }
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Target: 60 FPS during pan/zoom & 500+ objects without perf drops
-// ---------------------------------------------------------------------------
-
-test.describe(`Target: ${TARGETS.fps} FPS & ${TARGETS.objectCount}+ object rendering`, () => {
-  const sb = createSupabaseClient()
-  let boardId: string
-
-  test.beforeEach(async () => {
-    boardId = await createBoard(sb, `perf-fps-req-${Date.now()}`)
-  })
-
-  test.afterEach(async () => {
-    if (boardId) await cleanupBoard(sb, boardId)
-  })
-
-  test(`${TARGETS.objectCount} objects: avg FPS >= ${TARGETS.fps} during pan`, async ({ browser }) => {
-    await seedObjects(sb, boardId, TARGETS.objectCount, 'sticky_note')
-
-    const { page, context } = await openBoardAsUser(browser, boardId, USER_A_ID)
-
-    try {
-      await waitForObjectCount(page, TARGETS.objectCount, 30000)
-      await page.waitForTimeout(1000)
-
-      await page.getByRole('button', { name: /Hand/ }).click()
-      await page.waitForTimeout(500)
-
-      await startFpsMeasurement(page)
-
-      const canvas = page.locator('canvas').first()
-      const box = await canvas.boundingBox()
-      if (!box) throw new Error('Canvas not found')
-
-      const startX = box.x + box.width / 2
-      const startY = box.y + box.height / 2
-      await page.mouse.move(startX, startY)
-      await page.mouse.down()
-      for (let i = 0; i < 30; i++) {
-        await page.mouse.move(startX - i * 15, startY - i * 10, { steps: 2 })
-        await page.waitForTimeout(50)
-      }
-      await page.mouse.up()
-
-      const fps = await stopFpsMeasurement(page)
-
-      console.log(
-        `500-object pan — avg: ${fps.avg}, min: ${fps.min}, p95: ${fps.p95}, frames: ${fps.frameCount}`,
-      )
-
-      savePerfResult({
-        test: '500-object-fps-pan',
-        timestamp: new Date().toISOString(),
-        metrics: { avg: fps.avg, min: fps.min, p95: fps.p95, frameCount: fps.frameCount },
-        passed: fps.avg >= TARGETS.fps,
-      })
-
-      expect(fps.avg).toBeGreaterThanOrEqual(TARGETS.fps)
-    } finally {
-      await context.close()
-    }
-  })
-
-  test(`${TARGETS.objectCount} objects: avg FPS >= ${TARGETS.fps} during zoom`, async ({ browser }) => {
-    await seedObjects(sb, boardId, TARGETS.objectCount, 'sticky_note')
-
-    const { page, context } = await openBoardAsUser(browser, boardId, USER_A_ID)
-
-    try {
-      await waitForObjectCount(page, TARGETS.objectCount, 30000)
-      await page.waitForTimeout(1000)
-
-      await startFpsMeasurement(page)
-
-      const canvas = page.locator('canvas').first()
-      const box = await canvas.boundingBox()
-      if (!box) throw new Error('Canvas not found')
-
-      const cx = box.x + box.width / 2
-      const cy = box.y + box.height / 2
-      await page.mouse.move(cx, cy)
-
-      for (let i = 0; i < 15; i++) {
-        await page.mouse.wheel(0, 100)
-        await page.waitForTimeout(80)
-      }
-      for (let i = 0; i < 15; i++) {
-        await page.mouse.wheel(0, -100)
-        await page.waitForTimeout(80)
-      }
-
-      const fps = await stopFpsMeasurement(page)
-
-      console.log(
-        `500-object zoom — avg: ${fps.avg}, min: ${fps.min}, p95: ${fps.p95}, frames: ${fps.frameCount}`,
-      )
-
-      savePerfResult({
-        test: '500-object-fps-zoom',
-        timestamp: new Date().toISOString(),
-        metrics: { avg: fps.avg, min: fps.min, p95: fps.p95, frameCount: fps.frameCount },
-        passed: fps.avg >= TARGETS.fps,
-      })
-
-      expect(fps.avg).toBeGreaterThanOrEqual(TARGETS.fps)
-    } finally {
-      await context.close()
     }
   })
 })

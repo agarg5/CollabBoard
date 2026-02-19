@@ -43,9 +43,7 @@ export default defineConfig({
       workers: 1,
       use: {
         video: 'off',
-        // Run headed for accurate FPS measurements (headless Chromium has GC pauses)
-        headless: false,
-        launchOptions: { args: ['--disable-gpu-vsync'] },
+        headless: true,
       },
     },
   ],
