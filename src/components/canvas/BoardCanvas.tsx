@@ -161,15 +161,22 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
     }
   }, [deleteSelectedObjects, selectAll])
 
-  // Prevent middle-click autoscroll on the container
+  // Prevent middle-click autoscroll and right-click context menu on the container
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
     function preventMiddleClick(e: MouseEvent) {
       if (e.button === 1) e.preventDefault()
     }
+    function preventContextMenu(e: MouseEvent) {
+      e.preventDefault()
+    }
     container.addEventListener('mousedown', preventMiddleClick)
-    return () => container.removeEventListener('mousedown', preventMiddleClick)
+    container.addEventListener('contextmenu', preventContextMenu)
+    return () => {
+      container.removeEventListener('mousedown', preventMiddleClick)
+      container.removeEventListener('contextmenu', preventContextMenu)
+    }
   }, [])
 
   // Resize observer
@@ -249,6 +256,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
       const evt = e.evt
       const shouldPanNow =
         evt.button === 1 ||
+        evt.button === 2 ||
         (spaceHeld && evt.button === 0) ||
         (currentTool === 'hand' && evt.button === 0)
 
