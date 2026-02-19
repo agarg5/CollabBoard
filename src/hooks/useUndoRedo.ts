@@ -73,6 +73,7 @@ function applyReverse(
       width: action.before.width,
       height: action.before.height,
       rotation: action.before.rotation,
+      z_index: action.before.z_index,
       properties: action.before.properties,
       updated_at: now,
     }
@@ -113,6 +114,7 @@ function applyForward(
       width: action.after.width,
       height: action.after.height,
       rotation: action.after.rotation,
+      z_index: action.after.z_index,
       properties: action.after.properties,
       updated_at: now,
     }
@@ -129,6 +131,18 @@ export function trackCreate(obj: BoardObject) {
     actions: [{ type: 'create', objectId: obj.id, before: null, after: { ...obj } }],
   }
   useUndoStore.getState().pushUndo(entry)
+}
+
+/** Record creation of multiple objects for undo (e.g., paste, duplicate). */
+export function trackBatchCreate(objects: BoardObject[]) {
+  if (objects.length === 0) return
+  const actions: UndoAction[] = objects.map((obj) => ({
+    type: 'create' as const,
+    objectId: obj.id,
+    before: null,
+    after: { ...obj },
+  }))
+  useUndoStore.getState().pushUndo({ actions })
 }
 
 /** Record deletion of one or more objects for undo. */

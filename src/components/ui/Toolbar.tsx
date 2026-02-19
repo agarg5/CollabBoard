@@ -2,7 +2,7 @@ import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
 import { getValidUserId } from '../../store/authStore'
 import { patchObject, deleteObject, insertObject } from '../../lib/boardSync'
-import { trackDelete, trackBatchUpdate } from '../../hooks/useUndoRedo'
+import { trackDelete, trackBatchCreate, trackBatchUpdate } from '../../hooks/useUndoRedo'
 import type { BoardObject } from '../../types/board'
 
 const STICKY_COLORS = [
@@ -68,11 +68,13 @@ export function Toolbar() {
   function handleDuplicate() {
     const newObjects = duplicateSelected(getValidUserId())
     newObjects.forEach((obj) => insertObject(obj))
+    trackBatchCreate(newObjects)
   }
 
   function handlePaste() {
     const newObjects = pasteClipboard(getValidUserId())
     newObjects.forEach((obj) => insertObject(obj))
+    trackBatchCreate(newObjects)
   }
 
   const colorInfo = getMultiSelectColorInfo(selectedIds, objects)

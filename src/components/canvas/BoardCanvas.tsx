@@ -12,7 +12,7 @@ import { ConnectorPreview } from './ConnectorPreview'
 import { calculateZoom } from './zoomHelper'
 import { ZoomControls } from '../ui/ZoomControls'
 import { insertObject, deleteObject } from '../../lib/boardSync'
-import { useUndoRedo, trackCreate, trackDelete } from '../../hooks/useUndoRedo'
+import { useUndoRedo, trackCreate, trackBatchCreate, trackDelete } from '../../hooks/useUndoRedo'
 import type { BoardObject, ObjectType } from '../../types/board'
 
 const CREATION_TOOLS: Set<string> = new Set(['sticky_note', 'rectangle', 'circle', 'line', 'text', 'frame'])
@@ -144,6 +144,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
         e.preventDefault()
         const newObjects = useBoardStore.getState().duplicateSelected(getValidUserId())
         newObjects.forEach((obj) => insertObject(obj))
+        trackBatchCreate(newObjects)
         return
       }
 
@@ -157,6 +158,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
         e.preventDefault()
         const newObjects = useBoardStore.getState().pasteClipboard(getValidUserId())
         newObjects.forEach((obj) => insertObject(obj))
+        trackBatchCreate(newObjects)
         return
       }
 
