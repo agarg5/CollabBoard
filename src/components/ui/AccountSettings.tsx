@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { useUiStore } from '../../store/uiStore'
 
 export function AccountSettings() {
-  const { updateEmail, updatePassword } = useAuthStore()
+  const { user, updateEmail, updatePassword } = useAuthStore()
   const setShowAccountSettings = useUiStore((s) => s.setShowAccountSettings)
+
+  const isGoogleUser = user?.app_metadata?.provider === 'google'
 
   const [email, setEmail] = useState('')
   const [emailStatus, setEmailStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -15,9 +17,17 @@ export function AccountSettings() {
   const [passwordStatus, setPasswordStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [passwordSubmitting, setPasswordSubmitting] = useState(false)
 
-  function close() {
+  const close = useCallback(() => {
     setShowAccountSettings(false)
-  }
+  }, [setShowAccountSettings])
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') close()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [close])
 
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -90,9 +100,13 @@ export function AccountSettings() {
           </button>
         </div>
 
-        {renderEmailSection()}
-        <hr className="my-6 border-gray-200" />
-        {renderPasswordSection()}
+        {isGoogleUser ? renderGoogleNotice() : (
+          <>
+            {renderEmailSection()}
+            <hr className="my-6 border-gray-200" />
+            {renderPasswordSection()}
+          </>
+        )}
       </div>
     </div>
   )
@@ -124,6 +138,17 @@ export function AccountSettings() {
           {emailSubmitting ? 'Updating...' : 'Update Email'}
         </button>
       </form>
+    )
+  }
+
+  function renderGoogleNotice() {
+    return (
+      <p className="text-sm text-gray-500">
+        Your account is managed by Google. To change your email or password, visit your{' '}
+        <a href="https://myaccount.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+          Google Account settings
+        </a>.
+      </p>
     )
   }
 
