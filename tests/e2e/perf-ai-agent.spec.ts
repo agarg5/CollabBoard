@@ -1,4 +1,11 @@
 import { test, expect } from '@playwright/test'
+import {
+  createSupabaseClient,
+  createAnonClient,
+  createTestUser,
+  deleteTestUser,
+  type TestSession,
+} from './perf-helpers'
 
 /**
  * AI Agent performance test.
@@ -10,8 +17,19 @@ const AI_RESPONSE_TARGET_MS = 2000
 test.describe('AI Agent performance', () => {
   test.skip(!RUN_AI, 'Skipped: set RUN_AI_TESTS=true to run')
 
+  const sb = createSupabaseClient()
+  const anonSb = createAnonClient()
   const supabaseUrl = process.env.VITE_SUPABASE_URL!
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY!
+  let session: TestSession
+
+  test.beforeEach(async () => {
+    session = await createTestUser(sb, anonSb)
+  })
+
+  test.afterEach(async () => {
+    if (session?.userId) await deleteTestUser(sb, session.userId).catch(() => {})
+  })
 
   test(`AI agent responds within ${AI_RESPONSE_TARGET_MS}ms`, async () => {
     const prompt = 'Create a yellow sticky note that says Hello'
@@ -23,7 +41,7 @@ test.describe('AI Agent performance', () => {
       headers: {
         'Content-Type': 'application/json',
         apikey: supabaseKey,
-        Authorization: `Bearer ${supabaseKey}`,
+        Authorization: `Bearer ${session.accessToken}`,
       },
       body: JSON.stringify({ prompt, boardState }),
     })
@@ -31,14 +49,11 @@ test.describe('AI Agent performance', () => {
 
     console.log(`AI agent response time: ${elapsed}ms`)
     console.log(`AI agent status: ${res.status}`)
-
-    // The endpoint may require a real auth token; if it returns 401,
-    // still verify the latency of the round-trip
-    if (res.ok) {
-      const data = (await res.json()) as { message: string; toolCalls: unknown[] }
-      expect(data.message).toBeTruthy()
-      expect(data.toolCalls.length).toBeGreaterThan(0)
-    }
+    expect(res.status).not.toBe(401)
+    expect(res.ok).toBe(true)
+    const data = (await res.json()) as { message: string; toolCalls: unknown[] }
+    expect(data.message).toBeTruthy()
+    expect(data.toolCalls.length).toBeGreaterThan(0)
 
     expect(elapsed).toBeLessThan(AI_RESPONSE_TARGET_MS)
   })
