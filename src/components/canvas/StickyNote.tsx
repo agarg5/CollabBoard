@@ -39,7 +39,7 @@ export function StickyNote({
   const [isDragging, setIsDragging] = useState(false)
 
   const shouldCache = !isSelected && !isEditing && !isDragging
-  const cacheKey = `${obj.width}-${obj.height}-${color}-${text}`
+  const cacheKey = `${obj.width}-${obj.height}-${obj.rotation ?? 0}-${color}-${text}`
   const groupRef = useCachedNode(shouldCache, cacheKey, 12)
 
   function handleDragEnd(e: Konva.KonvaEventObject<DragEvent>) {

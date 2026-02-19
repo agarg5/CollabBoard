@@ -3,7 +3,7 @@ import { useBoardStore } from '../store/boardStore'
 import { useUiStore } from '../store/uiStore'
 import type { BoardObject } from '../types/board'
 
-const PADDING = 200 // world-unit padding to prevent pop-in
+const PADDING_PX = 200 // screen-pixel padding to prevent pop-in
 
 interface UseVisibleObjectsParams {
   stageWidth: number
@@ -20,11 +20,11 @@ export function useVisibleObjects({ stageWidth, stageHeight }: UseVisibleObjects
   return useMemo(() => {
     if (stageWidth === 0 || stageHeight === 0) return objects
 
-    // Compute visible viewport in world coordinates
-    const vpLeft = (-stagePosition.x / stageScale) - PADDING
-    const vpTop = (-stagePosition.y / stageScale) - PADDING
-    const vpRight = ((-stagePosition.x + stageWidth) / stageScale) + PADDING
-    const vpBottom = ((-stagePosition.y + stageHeight) / stageScale) + PADDING
+    // Compute visible viewport in world coordinates (padding applied in screen pixels)
+    const vpLeft = (-stagePosition.x - PADDING_PX) / stageScale
+    const vpTop = (-stagePosition.y - PADDING_PX) / stageScale
+    const vpRight = (-stagePosition.x + stageWidth + PADDING_PX) / stageScale
+    const vpBottom = (-stagePosition.y + stageHeight + PADDING_PX) / stageScale
 
     const selectedSet = new Set(selectedIds)
 

@@ -40,7 +40,7 @@ export function TextObject({
   const [isDragging, setIsDragging] = useState(false)
 
   const shouldCache = !isSelected && !isEditing && !isDragging
-  const cacheKey = `${obj.width}-${obj.height}-${text}-${fontSize}-${color}`
+  const cacheKey = `${obj.width}-${obj.height}-${obj.rotation ?? 0}-${text}-${fontSize}-${color}`
   const groupRef = useCachedNode(shouldCache, cacheKey)
 
   function handleDragEnd(e: Konva.KonvaEventObject<DragEvent>) {

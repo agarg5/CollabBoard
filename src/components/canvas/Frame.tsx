@@ -38,7 +38,7 @@ export function Frame({
   const [isDragging, setIsDragging] = useState(false)
 
   const shouldCache = !isSelected && !isEditing && !isDragging
-  const cacheKey = `${obj.width}-${obj.height}-${strokeColor}-${label}`
+  const cacheKey = `${obj.width}-${obj.height}-${obj.rotation ?? 0}-${strokeColor}-${label}`
   const groupRef = useCachedNode(shouldCache, cacheKey)
 
   function handleDragEnd(e: Konva.KonvaEventObject<DragEvent>) {

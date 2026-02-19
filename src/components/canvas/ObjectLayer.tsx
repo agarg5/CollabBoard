@@ -51,6 +51,8 @@ export function ObjectLayer({ selectionRect, stageWidth, stageHeight }: ObjectLa
     return (type && MIN_SIZES[type]) || DEFAULT_MIN
   }, [selectedIds, objects])
 
+  // Re-run when selectedIds changes OR when visibleObjects changes (so that
+  // culled-then-selected nodes are attached after they mount into the layer).
   useEffect(() => {
     const transformer = transformerRef.current
     const layer = layerRef.current
@@ -61,7 +63,7 @@ export function ObjectLayer({ selectionRect, stageWidth, stageHeight }: ObjectLa
       .filter(Boolean) as Konva.Node[]
     transformer.nodes(nodes)
     transformer.getLayer()?.batchDraw()
-  }, [selectedIds])
+  }, [selectedIds, visibleObjects])
 
   function handleSelect(id: string, e?: Konva.KonvaEventObject<MouseEvent>) {
     if (e?.evt.shiftKey) {

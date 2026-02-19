@@ -34,7 +34,7 @@ export function ShapeCircle({
   const [isDragging, setIsDragging] = useState(false)
 
   const shouldCache = !isSelected && !isEditing && !isDragging
-  const cacheKey = `${obj.width}-${obj.height}-${fillColor}-${strokeColor}-${strokeWidth}`
+  const cacheKey = `${obj.width}-${obj.height}-${obj.rotation ?? 0}-${fillColor}-${strokeColor}-${strokeWidth}`
   const groupRef = useCachedNode(shouldCache, cacheKey)
 
   function handleDragEnd(e: Konva.KonvaEventObject<DragEvent>) {
