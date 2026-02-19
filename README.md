@@ -145,6 +145,17 @@ npm run format       # Prettier
 npm test             # Vitest (unit tests)
 npm run test:watch   # Vitest in watch mode
 npm run test:e2e     # Playwright E2E tests
+npm run test:perf    # Playwright performance tests
+```
+
+## Performance Testing
+
+```bash
+# Run all performance tests
+npm run test:perf
+
+# Run only target-validation tests
+npm run test:perf -- tests/e2e/perf-requirements.spec.ts tests/e2e/perf-ai-agent.spec.ts
 ```
 
 ## Submission Documents
