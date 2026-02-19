@@ -70,6 +70,11 @@ function BoardView({ boardId }: { boardId: string }) {
 
 function AuthenticatedApp() {
   const boardId = useBoardStore((s) => s.boardId)
+  const setShowAccountSettings = useUiStore((s) => s.setShowAccountSettings)
+
+  useEffect(() => {
+    setShowAccountSettings(false)
+  }, [boardId, setShowAccountSettings])
 
   if (!boardId) return <BoardListPage />
   return <BoardView boardId={boardId} />
