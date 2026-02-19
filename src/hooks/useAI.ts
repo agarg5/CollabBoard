@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useBoardStore } from '../store/boardStore'
+import { useUiStore } from '../store/uiStore'
 import { executeToolCalls } from '../lib/aiExecutor'
 import type { AIResponse } from '../types/board'
 
@@ -40,6 +41,14 @@ export function useAI() {
     }
 
     const boardState = useBoardStore.getState().objects
+    const chatMessages = useUiStore.getState().chatMessages
+    // Exclude the last message — it's the current user prompt which the edge
+    // function appends separately. Without this slice the user turn is doubled.
+    const messageHistory = chatMessages.slice(0, -1).map((m) => ({
+      role: m.role,
+      content: m.content,
+    }))
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     }
@@ -55,7 +64,7 @@ export function useAI() {
       const res = await fetch(AI_FUNCTION_URL, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ prompt, boardState }),
+        body: JSON.stringify({ prompt, boardState, messageHistory }),
       })
 
       if (!res.ok) {
