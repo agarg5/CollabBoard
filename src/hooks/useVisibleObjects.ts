@@ -46,12 +46,28 @@ export function useVisibleObjects({ stageWidth, stageHeight }: UseVisibleObjects
         continue
       }
 
-      // AABB intersection check
+      // Compute rotated bounding box for AABB intersection check
+      let w = obj.width
+      let h = obj.height
+      const rotation = obj.rotation ?? 0
+      if (rotation % 90 !== 0) {
+        const rad = (rotation * Math.PI) / 180
+        const sin = Math.abs(Math.sin(rad))
+        const cos = Math.abs(Math.cos(rad))
+        w = obj.width * cos + obj.height * sin
+        h = obj.width * sin + obj.height * cos
+      }
+      // Center the expanded box on the object's center
+      const cx = obj.x + obj.width / 2
+      const cy = obj.y + obj.height / 2
+      const left = cx - w / 2
+      const top = cy - h / 2
+
       if (
-        obj.x + obj.width >= vpLeft &&
-        obj.x <= vpRight &&
-        obj.y + obj.height >= vpTop &&
-        obj.y <= vpBottom
+        left + w >= vpLeft &&
+        left <= vpRight &&
+        top + h >= vpTop &&
+        top <= vpBottom
       ) {
         visibleNonConnectors.push(obj)
         visibleNonConnectorIds.add(obj.id)
