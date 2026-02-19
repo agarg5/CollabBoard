@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { useBoardListStore } from '../../store/boardListStore'
@@ -9,12 +9,15 @@ import type { Board } from '../../types/board'
 export function BoardListPage() {
   const navigate = useNavigate()
   const { user, signOut, deleteAccount } = useAuthStore()
-  const { boards, loading, fetchBoards, createBoard, deleteBoard } = useBoardListStore()
+  const { boards, loading, fetchBoards, createBoard, deleteBoard, renameBoard } = useBoardListStore()
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [newBoardName, setNewBoardName] = useState('')
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deletingAccount, setDeletingAccount] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState('')
+  const renameInputRef = useRef<HTMLInputElement>(null)
   const showAccountSettings = useUiStore((s) => s.showAccountSettings)
   const setShowAccountSettings = useUiStore((s) => s.setShowAccountSettings)
 
@@ -44,6 +47,38 @@ export function BoardListPage() {
     if (!success) {
       window.alert('Failed to delete board. Please try again.')
     }
+  }
+
+  function startRenaming(board: Board) {
+    setEditingId(board.id)
+    setEditingName(board.name)
+    setTimeout(() => {
+      renameInputRef.current?.focus()
+      renameInputRef.current?.select()
+    }, 0)
+  }
+
+  async function commitRename() {
+    if (!editingId) return
+    const trimmed = editingName.trim()
+    if (!trimmed) {
+      setEditingId(null)
+      return
+    }
+    const originalBoard = boards.find((b) => b.id === editingId)
+    if (originalBoard && trimmed === originalBoard.name) {
+      setEditingId(null)
+      return
+    }
+    const success = await renameBoard(editingId, trimmed)
+    setEditingId(null)
+    if (!success) {
+      window.alert('Failed to rename board. Please try again.')
+    }
+  }
+
+  function cancelRename() {
+    setEditingId(null)
   }
 
   async function handleDeleteAccount() {
@@ -186,6 +221,7 @@ export function BoardListPage() {
 
   function renderBoardCard(board: Board) {
     const isDeleting = deletingId === board.id
+    const isEditing = editingId === board.id
     const createdDate = new Date(board.created_at).toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'short',
@@ -197,9 +233,9 @@ export function BoardListPage() {
         key={board.id}
         role="listitem"
         data-testid="board-card"
-        onClick={() => !isDeleting && navigate(`/board/${board.id}`)}
+        onClick={() => !isDeleting && !isEditing && navigate(`/board/${board.id}`)}
         onKeyDown={(e) => {
-          if ((e.key === 'Enter' || e.key === ' ') && !isDeleting) {
+          if ((e.key === 'Enter' || e.key === ' ') && !isDeleting && !isEditing) {
             e.preventDefault()
             navigate(`/board/${board.id}`)
           }
@@ -210,28 +246,67 @@ export function BoardListPage() {
           isDeleting ? 'opacity-50 pointer-events-none' : ''
         }`}
       >
-        <h3 className="text-base font-medium text-gray-900 mb-1 pr-8 truncate">
-          {board.name}
-        </h3>
+        {isEditing ? (
+          <input
+            ref={renameInputRef}
+            type="text"
+            value={editingName}
+            onChange={(e) => setEditingName(e.target.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation()
+              if (e.key === 'Enter') commitRename()
+              if (e.key === 'Escape') cancelRename()
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onBlur={commitRename}
+            className="text-base font-medium text-gray-900 mb-1 pr-16 w-full bg-transparent border-b-2 border-blue-500 focus:outline-none"
+          />
+        ) : (
+          <h3 className="text-base font-medium text-gray-900 mb-1 pr-16 truncate">
+            {board.name}
+          </h3>
+        )}
         <p className="text-xs text-gray-400">Created {createdDate}</p>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            handleDelete(board)
-          }}
-          aria-label={`Delete board: ${board.name}`}
-          className="absolute top-3 right-3 p-1.5 rounded cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-all focus:outline-none focus:ring-2 focus:ring-red-400"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path
-              d="M5 2V1h6v1h4v2H1V2h4zM2 5h12l-1 10H3L2 5zm4 2v6m4-6v6"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+        <div className="absolute top-3 right-3 flex items-center gap-1">
+          {!isEditing && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                startRenaming(board)
+              }}
+              aria-label={`Rename board: ${board.name}`}
+              className="p-1.5 rounded cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path
+                  d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              handleDelete(board)
+            }}
+            aria-label={`Delete board: ${board.name}`}
+            className="p-1.5 rounded cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-all focus:outline-none focus:ring-2 focus:ring-red-400"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path
+                d="M5 2V1h6v1h4v2H1V2h4zM2 5h12l-1 10H3L2 5zm4 2v6m4-6v6"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
     )
   }
