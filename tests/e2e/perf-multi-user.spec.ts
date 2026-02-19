@@ -8,6 +8,7 @@ import {
   USER_A_ID,
   getObjectCount,
   waitForObjectCount,
+  savePerfResult,
 } from './perf-helpers'
 
 test.describe('Multi-user sync (Scenarios 1 & 2)', () => {
@@ -59,6 +60,13 @@ test.describe('Multi-user sync (Scenarios 1 & 2)', () => {
       expect(latencyB).toBeGreaterThan(-1)
 
       console.log(`Object sync latency — Page A: ${latencyA}ms, Page B: ${latencyB}ms`)
+
+      savePerfResult({
+        test: '2-user-object-sync',
+        timestamp: new Date().toISOString(),
+        metrics: { latencyA, latencyB },
+        passed: latencyA < 500 && latencyB < 500,
+      })
 
       // Relaxed threshold: within 500ms (REST + realtime + render)
       expect(latencyA).toBeLessThan(500)

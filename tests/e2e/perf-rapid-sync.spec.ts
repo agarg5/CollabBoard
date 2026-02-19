@@ -7,6 +7,7 @@ import {
   openTwoUsers,
   getObjectCount,
   waitForObjectCount,
+  savePerfResult,
 } from './perf-helpers'
 
 test.describe('Rapid sync (Scenario 3)', () => {
@@ -67,6 +68,13 @@ test.describe('Rapid sync (Scenario 3)', () => {
       console.log(
         `Rapid sync: Page A got ${countA} objects, Page B got ${countB} objects`,
       )
+
+      savePerfResult({
+        test: 'rapid-sync-20-objects',
+        timestamp: new Date().toISOString(),
+        metrics: { countA, countB, latencyA, latencyB },
+        passed: countA === insertCount && countB === insertCount,
+      })
     } finally {
       await contextA.close()
       await contextB.close()
@@ -129,6 +137,14 @@ test.describe('Rapid sync (Scenario 3)', () => {
 
       const convergenceTime = Date.now() - start
       console.log(`Position convergence time: ${convergenceTime}ms`)
+
+      savePerfResult({
+        test: 'rapid-update-convergence',
+        timestamp: new Date().toISOString(),
+        metrics: { convergenceTime, converged },
+        passed: converged && convergenceTime < 2000,
+      })
+
       expect(converged).toBe(true)
       expect(convergenceTime).toBeLessThan(2000)
     } finally {
