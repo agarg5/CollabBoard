@@ -199,6 +199,11 @@ test.describe(`Target: object sync < ${TARGETS.objectLatencyMs}ms`, () => {
       expect(await getObjectCount(pageA)).toBe(0)
       expect(await getObjectCount(pageB)).toBe(0)
 
+      // Start waiting in both clients before inserting so both timers begin
+      // from the same point and are not affected by sequential awaits.
+      const waitA = waitForObjectCount(pageA, 1, 5000)
+      const waitB = waitForObjectCount(pageB, 1, 5000)
+
       // Insert object via REST (triggers postgres_changes)
       await sb.from('board_objects').insert({
         id: crypto.randomUUID(),
@@ -214,8 +219,7 @@ test.describe(`Target: object sync < ${TARGETS.objectLatencyMs}ms`, () => {
         updated_at: new Date().toISOString(),
       })
 
-      const latencyA = await waitForObjectCount(pageA, 1, 5000)
-      const latencyB = await waitForObjectCount(pageB, 1, 5000)
+      const [latencyA, latencyB] = await Promise.all([waitA, waitB])
 
       console.log(`Object sync latency — Page A: ${latencyA}ms, Page B: ${latencyB}ms`)
 
