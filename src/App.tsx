@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from './store/authStore'
 import { useBoardStore } from './store/boardStore'
+import { useBoardListStore } from './store/boardListStore'
 import { useBoardChannel } from './hooks/useBoardChannel'
 import { useRealtimeSync } from './hooks/useRealtimeSync'
 import { usePresenceCursors } from './hooks/usePresenceCursors'
@@ -19,6 +20,7 @@ import './App.css'
 function BoardView({ boardId }: { boardId: string }) {
   const { user, signOut } = useAuthStore()
   const setBoardId = useBoardStore((s) => s.setBoardId)
+  const boardName = useBoardListStore((s) => s.boards.find((b) => b.id === boardId)?.name)
   const chatPanelOpen = useUiStore((s) => s.chatPanelOpen)
   const showAccountSettings = useUiStore((s) => s.showAccountSettings)
   const setShowAccountSettings = useUiStore((s) => s.setShowAccountSettings)
@@ -38,7 +40,12 @@ function BoardView({ boardId }: { boardId: string }) {
           >
             &larr; Boards
           </button>
-          <h1 className="text-xl font-semibold">CollabBoard</h1>
+          {boardName && (
+            <>
+              <span className="text-gray-300 select-none">/</span>
+              <h1 className="text-lg font-medium text-gray-700 truncate max-w-xs">{boardName}</h1>
+            </>
+          )}
           <ConnectionStatus />
         </div>
         <div className="flex items-center gap-3">
