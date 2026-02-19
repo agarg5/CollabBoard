@@ -493,7 +493,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
       } else if (tool === 'line') {
         width = 150
         height = 2
-        properties = { strokeColor: '#3b82f6', strokeWidth: 2 }
+        properties = { strokeColor: '#1e293b', strokeWidth: 2 }
       } else if (tool === 'text') {
         width = 200
         height = 32

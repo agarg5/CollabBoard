@@ -22,7 +22,7 @@ export function ShapeLine({
   onDragEnd,
   onTransformEnd,
 }: ShapeLineProps) {
-  const strokeColor = (obj.properties.strokeColor as string) || '#3b82f6'
+  const strokeColor = (obj.properties.strokeColor as string) || '#1e293b'
   const strokeWidth = (obj.properties.strokeWidth as number) || 2
 
   function handleDragEnd(e: Konva.KonvaEventObject<DragEvent>) {

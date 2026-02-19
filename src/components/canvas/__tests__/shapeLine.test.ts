@@ -7,7 +7,7 @@ function createLine(overrides: Partial<BoardObject> = {}): BoardObject {
     id: crypto.randomUUID(),
     board_id: '',
     type: 'line',
-    properties: { strokeColor: '#3b82f6', strokeWidth: 2 },
+    properties: { strokeColor: '#1e293b', strokeWidth: 2 },
     x: 0,
     y: 0,
     width: 150,
@@ -28,7 +28,7 @@ describe('line creation', () => {
   it('creates a line with default properties', () => {
     const line = createLine()
     expect(line.type).toBe('line')
-    expect(line.properties.strokeColor).toBe('#3b82f6')
+    expect(line.properties.strokeColor).toBe('#1e293b')
     expect(line.properties.strokeWidth).toBe(2)
     expect(line.width).toBe(150)
     expect(line.height).toBe(2)
