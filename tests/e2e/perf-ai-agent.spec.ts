@@ -4,6 +4,7 @@ import {
   createAnonClient,
   createTestUser,
   deleteTestUser,
+  savePerfResult,
   type TestSession,
 } from './perf-helpers'
 
@@ -54,6 +55,13 @@ test.describe('AI Agent performance', () => {
     const data = (await res.json()) as { message: string; toolCalls: unknown[] }
     expect(data.message).toBeTruthy()
     expect(data.toolCalls.length).toBeGreaterThan(0)
+
+    savePerfResult({
+      test: 'ai-agent-response-latency',
+      timestamp: new Date().toISOString(),
+      metrics: { elapsedMs: elapsed, status: res.status },
+      passed: elapsed < AI_RESPONSE_TARGET_MS,
+    })
 
     expect(elapsed).toBeLessThan(AI_RESPONSE_TARGET_MS)
   })
