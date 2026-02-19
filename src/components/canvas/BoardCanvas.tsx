@@ -98,6 +98,8 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
           setConnectorPreview(null)
           return
         }
+        // Deselect all objects
+        setSelectedIds([])
         return
       }
 
