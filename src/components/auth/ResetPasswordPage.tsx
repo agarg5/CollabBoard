@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { useAuthStore } from '../../store/authStore'
 
 interface ResetPasswordPageProps {
   onComplete: () => void
 }
 
 export function ResetPasswordPage({ onComplete }: ResetPasswordPageProps) {
+  const updatePassword = useAuthStore((s) => s.updatePassword)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -27,16 +28,13 @@ export function ResetPasswordPage({ onComplete }: ResetPasswordPageProps) {
     }
 
     setSubmitting(true)
-    try {
-      const { error: updateError } = await supabase.auth.updateUser({ password })
-      if (updateError) {
-        setError(updateError.message)
-        return
-      }
-      setSuccess(true)
-    } finally {
-      setSubmitting(false)
+    const err = await updatePassword(password)
+    setSubmitting(false)
+    if (err) {
+      setError(err)
+      return
     }
+    setSuccess(true)
   }
 
   return (

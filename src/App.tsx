@@ -13,7 +13,6 @@ import { PresencePanel } from './components/ui/PresencePanel'
 import { ConnectionStatus } from './components/ui/ConnectionStatus'
 import { AIChatPanel } from './components/ui/AIChatPanel'
 import { useUiStore } from './store/uiStore'
-import { supabase } from './lib/supabase'
 import './App.css'
 
 function BoardView({ boardId }: { boardId: string }) {
@@ -69,21 +68,22 @@ function AuthenticatedApp() {
 
 function App() {
   const { user, loading, initialize } = useAuthStore()
-  const [recoveryMode, setRecoveryMode] = useState(false)
+  const [recoveryMode, setRecoveryMode] = useState(() => {
+    // Detect recovery token in URL hash on fresh page load
+    const hash = window.location.hash
+    return hash.includes('type=recovery')
+  })
 
   useEffect(() => {
-    const unsubscribe = initialize()
-    return unsubscribe
-  }, [initialize])
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const unsubscribe = initialize((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setRecoveryMode(true)
+      } else if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        setRecoveryMode(false)
       }
     })
-    return () => subscription.unsubscribe()
-  }, [])
+    return unsubscribe
+  }, [initialize])
 
   if (loading) return renderLoading()
   if (recoveryMode && user) return <ResetPasswordPage onComplete={() => setRecoveryMode(false)} />

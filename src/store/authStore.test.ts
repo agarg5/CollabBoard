@@ -6,6 +6,7 @@ vi.mock('../lib/supabase', () => ({
       signInWithOAuth: vi.fn().mockResolvedValue({ data: {}, error: null }),
       signOut: vi.fn().mockResolvedValue({ error: null }),
       resetPasswordForEmail: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      updateUser: vi.fn().mockResolvedValue({ data: { user: {} }, error: null }),
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       onAuthStateChange: vi.fn().mockReturnValue({
         data: { subscription: { unsubscribe: vi.fn() } },
@@ -65,5 +66,20 @@ describe('authStore', () => {
     } as never)
     const result = await useAuthStore.getState().resetPasswordForEmail('bad@example.com')
     expect(result).toBe('User not found')
+  })
+
+  it('calls supabase updateUser with password and returns null on success', async () => {
+    const result = await useAuthStore.getState().updatePassword('newpass123')
+    expect(supabase.auth.updateUser).toHaveBeenCalledWith({ password: 'newpass123' })
+    expect(result).toBeNull()
+  })
+
+  it('returns error message when updatePassword fails', async () => {
+    vi.mocked(supabase.auth.updateUser).mockResolvedValueOnce({
+      data: { user: null },
+      error: { message: 'Password too short', name: 'AuthApiError', status: 422 },
+    } as never)
+    const result = await useAuthStore.getState().updatePassword('short')
+    expect(result).toBe('Password too short')
   })
 })
