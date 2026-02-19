@@ -87,11 +87,13 @@ describe('boardListStore', () => {
     useBoardListStore.setState({ boards: [board] })
 
     const chain = chainMock({ error: null })
+    chain.select = vi.fn().mockResolvedValue({ data: [{ id: 'board-1' }], error: null })
     mockFrom.mockReturnValue(chain)
 
     const result = await useBoardListStore.getState().deleteBoard('board-1')
 
     expect(result).toBe(true)
+    expect(chain.select).toHaveBeenCalledWith('id')
     expect(useBoardListStore.getState().boards).toHaveLength(0)
   })
 
@@ -99,9 +101,22 @@ describe('boardListStore', () => {
     const board = makeBoard({ id: 'board-1' })
     useBoardListStore.setState({ boards: [board] })
 
-    const chain = chainMock({ error: { message: 'fail' } })
-    // Make the eq call return the error directly for delete chain
-    chain.eq = vi.fn().mockResolvedValue({ error: { message: 'fail' } })
+    const chain = chainMock({ error: null })
+    chain.select = vi.fn().mockResolvedValue({ data: null, error: { message: 'fail' } })
+    mockFrom.mockReturnValue(chain)
+
+    const result = await useBoardListStore.getState().deleteBoard('board-1')
+
+    expect(result).toBe(false)
+    expect(useBoardListStore.getState().boards).toHaveLength(1)
+  })
+
+  it('deleteBoard returns false when no rows are deleted', async () => {
+    const board = makeBoard({ id: 'board-1' })
+    useBoardListStore.setState({ boards: [board] })
+
+    const chain = chainMock({ error: null })
+    chain.select = vi.fn().mockResolvedValue({ data: [], error: null })
     mockFrom.mockReturnValue(chain)
 
     const result = await useBoardListStore.getState().deleteBoard('board-1')

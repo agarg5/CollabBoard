@@ -47,10 +47,19 @@ export const useBoardListStore = create<BoardListState>((set, get) => ({
   },
 
   deleteBoard: async (id: string) => {
-    const { error } = await supabase.from('boards').delete().eq('id', id)
+    const { data, error } = await supabase
+      .from('boards')
+      .delete()
+      .eq('id', id)
+      .select('id')
 
     if (error) {
       console.error('Failed to delete board:', error.message)
+      return false
+    }
+
+    if (!data || data.length === 0) {
+      console.error('Failed to delete board: no rows affected')
       return false
     }
 
