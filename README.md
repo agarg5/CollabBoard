@@ -147,6 +147,11 @@ npm run test:watch   # Vitest in watch mode
 npm run test:e2e     # Playwright E2E tests
 npm run test:perf    # Performance targets + explicit PASS/FAIL summary
 ```
+## Submission Documents
+
+- [AI Development Log](./AI_DEV_LOG.md) — Tools, workflow, effective prompts, and learnings
+- [AI Cost Analysis](./AI_COST_ANALYSIS.md) — Development costs and production projections
+
 
 ## Performance Testing
 
@@ -155,16 +160,13 @@ npm run test:perf    # Performance targets + explicit PASS/FAIL summary
 npm run test:perf
 ```
 
-## Submission Documents
-
-- [AI Development Log](./AI_DEV_LOG.md) — Tools, workflow, effective prompts, and learnings
-- [AI Cost Analysis](./AI_COST_ANALYSIS.md) — Development costs and production projections
+To include the AI agent latency test, set `RUN_AI_TESTS=true` (requires a live OpenAI key and Supabase Edge Function).
 
 ## Performance Targets
 
-- 60 FPS during pan/zoom/object manipulation
-- 500+ objects on canvas without performance drops
-- <50ms cursor sync latency
-- <100ms object sync latency
-- <2s AI agent response time
-- 5+ concurrent users per board
+- **60 FPS during pan/zoom/object manipulation** — Not covered by the automated suite (Playwright is capped at 30 FPS). Verify in Chrome DevTools (e.g. Performance panel or FPS meter).
+- **500+ objects on canvas without performance drops** — Manual / stress check; not in the perf suite.
+- **<50ms cursor sync latency** — `perf-requirements.spec.ts`: test “cursor broadcast round-trip avg < 50ms”.
+- **<100ms object sync latency** — `perf-requirements.spec.ts`: test “object creation syncs to both clients within …”.
+- **<2s AI agent response time** — `perf-ai-agent.spec.ts`: test “AI agent responds within …” (run with `RUN_AI_TESTS=true`).
+- **5+ concurrent users per board** — `perf-requirements.spec.ts`: tests “5 users all sync object creation” and “5 users see presence of all others”.
