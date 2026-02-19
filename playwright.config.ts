@@ -20,6 +20,9 @@ try {
   // .env file is optional (CI may set env vars directly)
 }
 
+const BASE_PORT = process.env.PLAYWRIGHT_PORT ?? '5173'
+const BASE_URL = process.env.BASE_URL ?? `http://localhost:${BASE_PORT}`
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
@@ -41,12 +44,12 @@ export default defineConfig({
     },
   ],
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: BASE_URL,
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'npm run dev -- --port 5173 --strictPort',
-    url: 'http://localhost:5173',
+    command: `npm run dev -- --port ${BASE_PORT} --strictPort`,
+    url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     env: {
       VITE_DEV_BYPASS_AUTH: 'true',
