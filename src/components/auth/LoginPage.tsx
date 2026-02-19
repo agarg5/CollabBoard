@@ -5,12 +5,14 @@ export function LoginPage() {
   const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle)
   const signInWithEmail = useAuthStore((s) => s.signInWithEmail)
   const signUpWithEmail = useAuthStore((s) => s.signUpWithEmail)
+  const resetPasswordForEmail = useAuthStore((s) => s.resetPasswordForEmail)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault()
@@ -40,6 +42,35 @@ export function LoginPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setMessage(null)
+    setSubmitting(true)
+    try {
+      const err = await resetPasswordForEmail(email)
+      if (err) {
+        setError(err)
+      } else {
+        setMessage('Check your email for a password reset link.')
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (showForgotPassword) {
+    return (
+      <main className="flex items-center justify-center w-screen h-screen bg-gray-100">
+        <div className="flex flex-col items-center gap-4 p-12 bg-white rounded-xl shadow-md w-full max-w-sm">
+          <h1 className="text-3xl font-bold text-gray-900">CollabBoard</h1>
+          <p className="text-base text-gray-500">Reset your password</p>
+          {renderForgotForm()}
+        </div>
+      </main>
+    )
   }
 
   return (
@@ -108,6 +139,13 @@ export function LoginPage() {
             Sign Up
           </button>
         </div>
+        <button
+          type="button"
+          onClick={() => { setShowForgotPassword(true); setError(null); setMessage(null) }}
+          className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+        >
+          Forgot password?
+        </button>
       </form>
     )
   }
@@ -119,6 +157,46 @@ export function LoginPage() {
         <span className="text-sm text-gray-400">or</span>
         <div className="flex-1 h-px bg-gray-300" />
       </div>
+    )
+  }
+
+  function renderForgotForm() {
+    return (
+      <form onSubmit={handleForgotPassword} className="flex flex-col gap-3 w-full mt-4" aria-label="Reset password">
+        {error && (
+          <p role="alert" className="text-sm text-red-700 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+        )}
+        {message && (
+          <p role="status" className="text-sm text-green-800 bg-green-50 rounded-lg px-3 py-2">{message}</p>
+        )}
+        <div>
+          <label htmlFor="forgot-email" className="sr-only">Email</label>
+          <input
+            id="forgot-email"
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+            className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="w-full px-4 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg cursor-pointer hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Send Reset Link
+        </button>
+        <button
+          type="button"
+          onClick={() => { setShowForgotPassword(false); setError(null); setMessage(null) }}
+          className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+        >
+          Back to login
+        </button>
+      </form>
     )
   }
 
