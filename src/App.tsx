@@ -1,10 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuthStore } from './store/authStore'
 import { useBoardStore } from './store/boardStore'
 import { useBoardChannel } from './hooks/useBoardChannel'
 import { useRealtimeSync } from './hooks/useRealtimeSync'
 import { usePresenceCursors } from './hooks/usePresenceCursors'
 import { LoginPage } from './components/auth/LoginPage'
+import { ResetPasswordPage } from './components/auth/ResetPasswordPage'
 import { BoardCanvas } from './components/canvas/BoardCanvas'
 import { BoardListPage } from './components/ui/BoardListPage'
 import { Toolbar } from './components/ui/Toolbar'
@@ -12,6 +13,7 @@ import { PresencePanel } from './components/ui/PresencePanel'
 import { ConnectionStatus } from './components/ui/ConnectionStatus'
 import { AIChatPanel } from './components/ui/AIChatPanel'
 import { useUiStore } from './store/uiStore'
+import { supabase } from './lib/supabase'
 import './App.css'
 
 function BoardView({ boardId }: { boardId: string }) {
@@ -67,13 +69,24 @@ function AuthenticatedApp() {
 
 function App() {
   const { user, loading, initialize } = useAuthStore()
+  const [recoveryMode, setRecoveryMode] = useState(false)
 
   useEffect(() => {
     const unsubscribe = initialize()
     return unsubscribe
   }, [initialize])
 
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecoveryMode(true)
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
   if (loading) return renderLoading()
+  if (recoveryMode && user) return <ResetPasswordPage onComplete={() => setRecoveryMode(false)} />
   if (!user) return <LoginPage />
   return <AuthenticatedApp />
 
