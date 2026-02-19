@@ -7,10 +7,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 export function createSupabaseClient(): SupabaseClient {
   const url = process.env.VITE_SUPABASE_URL
-  const key = process.env.VITE_SUPABASE_ANON_KEY
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.VITE_SUPABASE_ANON_KEY
   if (!url || !key) {
     throw new Error(
-      'VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY env vars are required',
+      'VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY env vars are required',
     )
   }
   return createClient(url, key)
