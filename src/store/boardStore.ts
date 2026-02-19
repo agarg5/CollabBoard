@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { BoardObject } from '../types/board'
+import { useUndoStore } from './undoStore'
 
 const PASTE_OFFSET = 20
 
@@ -24,7 +25,10 @@ interface BoardState {
 
 export const useBoardStore = create<BoardState>((set, get) => ({
   boardId: null,
-  setBoardId: (id) => set({ boardId: id, objects: [], selectedIds: [] }),
+  setBoardId: (id) => {
+    set({ boardId: id, objects: [], selectedIds: [] })
+    useUndoStore.getState().clearHistory()
+  },
   objects: [],
   selectedIds: [],
   clipboard: [],

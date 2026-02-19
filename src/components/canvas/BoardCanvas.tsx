@@ -12,6 +12,7 @@ import { ConnectorPreview } from './ConnectorPreview'
 import { calculateZoom } from './zoomHelper'
 import { ZoomControls } from '../ui/ZoomControls'
 import { insertObject, deleteObject } from '../../lib/boardSync'
+import { useUndoRedo, trackCreate, trackBatchCreate, trackDelete } from '../../hooks/useUndoRedo'
 import type { BoardObject, ObjectType } from '../../types/board'
 
 const CREATION_TOOLS: Set<string> = new Set(['sticky_note', 'rectangle', 'circle', 'line', 'text', 'frame'])
@@ -69,6 +70,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
   const setSelectedIds = useBoardStore((s) => s.setSelectedIds)
   const deleteSelectedObjects = useBoardStore((s) => s.deleteSelectedObjects)
   const selectAll = useBoardStore((s) => s.selectAll)
+  const { undo, redo } = useUndoRedo()
 
   function updateSelectionRect(rect: SelectionRect | null) {
     selectionRectRef.current = rect
@@ -106,10 +108,27 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
 
       const mod = e.metaKey || e.ctrlKey
 
+      // Undo: Cmd+Z / Ctrl+Z
+      if (mod && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        undo()
+        return
+      }
+
+      // Redo: Cmd+Shift+Z / Ctrl+Shift+Z
+      if (mod && e.key === 'z' && e.shiftKey) {
+        e.preventDefault()
+        redo()
+        return
+      }
+
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        const { selectedIds } = useBoardStore.getState()
+        const { selectedIds, objects } = useBoardStore.getState()
         if (selectedIds.length === 0) return
         e.preventDefault()
+        // Track deletion for undo before removing
+        const deletedObjs = objects.filter((o) => selectedIds.includes(o.id))
+        trackDelete(deletedObjs)
         const deletedIds = deleteSelectedObjects()
         deletedIds.forEach((id) => deleteObject(id))
         return
@@ -125,6 +144,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
         e.preventDefault()
         const newObjects = useBoardStore.getState().duplicateSelected(getValidUserId())
         newObjects.forEach((obj) => insertObject(obj))
+        trackBatchCreate(newObjects)
         return
       }
 
@@ -138,6 +158,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
         e.preventDefault()
         const newObjects = useBoardStore.getState().pasteClipboard(getValidUserId())
         newObjects.forEach((obj) => insertObject(obj))
+        trackBatchCreate(newObjects)
         return
       }
 
@@ -159,7 +180,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
     }
-  }, [deleteSelectedObjects, selectAll])
+  }, [deleteSelectedObjects, selectAll, undo, redo])
 
   // Prevent middle-click autoscroll and right-click context menu on the container
   useEffect(() => {
@@ -461,6 +482,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
 
       addObject(newObj)
       insertObject(newObj)
+      trackCreate(newObj)
       setSelectedIds([newObj.id])
 
       // Reset connector state
@@ -523,6 +545,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
       }
       addObject(newObj)
       insertObject(newObj)
+      trackCreate(newObj)
       setSelectedIds([newObj.id])
       if (tool === 'text') {
         useUiStore.getState().setEditingId(newObj.id)
@@ -543,7 +566,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
   }
 
   return (
-    <div ref={containerRef} className={`relative flex-1 overflow-hidden bg-white ${getCursorClass()}`} role="application" aria-label="Whiteboard canvas. Use the toolbar to select tools, then click on the canvas to create objects. Use keyboard shortcuts: Delete to remove, Ctrl+A to select all, Ctrl+C to copy, Ctrl+V to paste, Ctrl+D to duplicate, Space+drag to pan.">
+    <div ref={containerRef} className={`relative flex-1 overflow-hidden bg-white ${getCursorClass()}`} role="application" aria-label="Whiteboard canvas. Use the toolbar to select tools, then click on the canvas to create objects. Use keyboard shortcuts: Delete to remove, Ctrl+A to select all, Ctrl+C to copy, Ctrl+V to paste, Ctrl+D to duplicate, Ctrl+Z to undo, Ctrl+Shift+Z to redo, Space+drag to pan.">
       {dimensions.width > 0 && (
         <Stage
           width={dimensions.width}
