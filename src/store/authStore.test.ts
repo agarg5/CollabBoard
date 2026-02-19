@@ -68,18 +68,37 @@ describe('authStore', () => {
     expect(result).toBe('User not found')
   })
 
-  it('calls supabase updateUser with password and returns null on success', async () => {
-    const result = await useAuthStore.getState().updatePassword('newpass123')
-    expect(supabase.auth.updateUser).toHaveBeenCalledWith({ password: 'newpass123' })
-    expect(result).toBeNull()
+  describe('updateEmail', () => {
+    it('calls supabase updateUser with email and returns null on success', async () => {
+      const result = await useAuthStore.getState().updateEmail('new@example.com')
+      expect(supabase.auth.updateUser).toHaveBeenCalledWith({ email: 'new@example.com' })
+      expect(result).toBeNull()
+    })
+
+    it('returns error message on failure', async () => {
+      vi.mocked(supabase.auth.updateUser).mockResolvedValueOnce({
+        data: { user: null },
+        error: { message: 'Email already in use', name: 'AuthApiError', status: 422 },
+      } as never)
+      const result = await useAuthStore.getState().updateEmail('taken@example.com')
+      expect(result).toBe('Email already in use')
+    })
   })
 
-  it('returns error message when updatePassword fails', async () => {
-    vi.mocked(supabase.auth.updateUser).mockResolvedValueOnce({
-      data: { user: null },
-      error: { message: 'Password too short', name: 'AuthApiError', status: 422 },
-    } as never)
-    const result = await useAuthStore.getState().updatePassword('short')
-    expect(result).toBe('Password too short')
+  describe('updatePassword', () => {
+    it('calls supabase updateUser with password and returns null on success', async () => {
+      const result = await useAuthStore.getState().updatePassword('newpass123')
+      expect(supabase.auth.updateUser).toHaveBeenCalledWith({ password: 'newpass123' })
+      expect(result).toBeNull()
+    })
+
+    it('returns error message on failure', async () => {
+      vi.mocked(supabase.auth.updateUser).mockResolvedValueOnce({
+        data: { user: null },
+        error: { message: 'Password too short', name: 'AuthApiError', status: 422 },
+      } as never)
+      const result = await useAuthStore.getState().updatePassword('short')
+      expect(result).toBe('Password too short')
+    })
   })
 })

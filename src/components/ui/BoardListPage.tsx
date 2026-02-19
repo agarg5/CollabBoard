@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { useBoardStore } from '../../store/boardStore'
 import { useBoardListStore } from '../../store/boardListStore'
+import { useUiStore } from '../../store/uiStore'
+import { AccountSettings } from './AccountSettings'
 import type { Board } from '../../types/board'
 
 export function BoardListPage() {
@@ -13,6 +15,8 @@ export function BoardListPage() {
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deletingAccount, setDeletingAccount] = useState(false)
+  const showAccountSettings = useUiStore((s) => s.showAccountSettings)
+  const setShowAccountSettings = useUiStore((s) => s.setShowAccountSettings)
 
   useEffect(() => {
     if (user) fetchBoards(user.id)
@@ -84,6 +88,7 @@ export function BoardListPage() {
             {boards.length === 0 ? renderEmptyState() : renderGrid()}
           </div>
         </main>
+        {showAccountSettings && <AccountSettings />}
       </div>
     )
   }
@@ -93,7 +98,13 @@ export function BoardListPage() {
       <header className="flex items-center justify-between p-4 bg-white border-b border-gray-200">
         <h1 className="text-xl font-semibold">CollabBoard</h1>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">{user!.email}</span>
+          <button
+            onClick={() => setShowAccountSettings(true)}
+            aria-label="Account settings"
+            className="text-sm text-gray-500 cursor-pointer hover:text-gray-700 hover:underline transition-colors"
+          >
+            {user!.email}
+          </button>
           <button
             onClick={signOut}
             aria-label="Sign out"

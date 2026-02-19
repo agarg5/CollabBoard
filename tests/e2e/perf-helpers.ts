@@ -1,5 +1,8 @@
 import { type Page, type Browser, type BrowserContext } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
 
 // ---------------------------------------------------------------------------
 // Supabase REST client (for seeding/cleanup outside the browser)
@@ -7,10 +10,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 export function createSupabaseClient(): SupabaseClient {
   const url = process.env.VITE_SUPABASE_URL
-  const key = process.env.VITE_SUPABASE_ANON_KEY
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.VITE_SUPABASE_ANON_KEY
   if (!url || !key) {
     throw new Error(
-      'VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY env vars are required',
+      'VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or VITE_SUPABASE_ANON_KEY) env vars are required',
     )
   }
   return createClient(url, key)
@@ -81,16 +84,22 @@ export async function cleanupBoard(
 
 export const USER_A_ID = '00000000-0000-0000-0000-00000000000a'
 export const USER_B_ID = '00000000-0000-0000-0000-00000000000b'
+export const USER_C_ID = '00000000-0000-0000-0000-00000000000c'
+export const USER_D_ID = '00000000-0000-0000-0000-00000000000d'
+export const USER_E_ID = '00000000-0000-0000-0000-00000000000e'
+export const ALL_USER_IDS = [USER_A_ID, USER_B_ID, USER_C_ID, USER_D_ID, USER_E_ID]
 
 /**
  * Opens the app, sets a distinct dev user ID via localStorage, and
  * navigates to the given board by setting boardId in the Zustand store.
  */
+const DEFAULT_BASE_URL = process.env.BASE_URL ?? `http://localhost:${process.env.PLAYWRIGHT_PORT ?? '5173'}`
+
 export async function openBoardAsUser(
   browser: Browser,
   boardId: string,
   userId: string,
-  baseURL = 'http://localhost:5173',
+  baseURL = DEFAULT_BASE_URL,
 ): Promise<{ page: Page; context: BrowserContext }> {
   const context = await browser.newContext({ baseURL })
   const page = await context.newPage()
@@ -133,7 +142,7 @@ export async function openBoardAsUser(
 export async function openTwoUsers(
   browser: Browser,
   boardId: string,
-  baseURL = 'http://localhost:5173',
+  baseURL = DEFAULT_BASE_URL,
 ): Promise<{
   pageA: Page
   pageB: Page
@@ -236,4 +245,51 @@ export async function waitForObjectCount(
     await page.waitForTimeout(50)
   }
   return -1
+}
+
+// ---------------------------------------------------------------------------
+// N-user helper
+// ---------------------------------------------------------------------------
+
+export async function openNUsers(
+  browser: Browser,
+  boardId: string,
+  n: number,
+  baseURL = 'http://localhost:5173',
+): Promise<{ pages: Page[]; contexts: BrowserContext[] }> {
+  const results = await Promise.all(
+    ALL_USER_IDS.slice(0, n).map((uid) =>
+      openBoardAsUser(browser, boardId, uid, baseURL),
+    ),
+  )
+  return {
+    pages: results.map((r) => r.page),
+    contexts: results.map((r) => r.context),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Results persistence
+// ---------------------------------------------------------------------------
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const RESULTS_DIR = resolve(__dirname, '../../test-results')
+const RESULTS_FILE = resolve(RESULTS_DIR, 'perf-results.json')
+
+export interface PerfResult {
+  test: string
+  timestamp: string
+  metrics: Record<string, number | string | boolean>
+  passed: boolean
+}
+
+export function savePerfResult(result: PerfResult): void {
+  if (!existsSync(RESULTS_DIR)) mkdirSync(RESULTS_DIR, { recursive: true })
+
+  let results: PerfResult[] = []
+  if (existsSync(RESULTS_FILE)) {
+    results = JSON.parse(readFileSync(RESULTS_FILE, 'utf-8'))
+  }
+  results.push(result)
+  writeFileSync(RESULTS_FILE, JSON.stringify(results, null, 2))
 }
