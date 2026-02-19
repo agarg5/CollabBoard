@@ -76,11 +76,10 @@ test.describe('FPS performance', () => {
         test: '100-object-fps-pan',
         timestamp: new Date().toISOString(),
         metrics: { avg: fps.avg, min: fps.min, p95: fps.p95, frameCount: fps.frameCount },
-        passed: fps.avg >= 50,
+        passed: fps.avg >= 60,
       })
 
-      // Expect at least 50 avg FPS (allowing some headroom below 60)
-      expect(fps.avg).toBeGreaterThanOrEqual(50)
+      expect(fps.avg).toBeGreaterThanOrEqual(60)
     } finally {
       await context.close()
     }
@@ -133,11 +132,10 @@ test.describe('FPS performance', () => {
         test: '500-object-fps-zoom',
         timestamp: new Date().toISOString(),
         metrics: { avg: fps.avg, min: fps.min, p95: fps.p95, frameCount: fps.frameCount },
-        passed: fps.avg >= 30,
+        passed: fps.avg >= 60,
       })
 
-      // Relaxed threshold: at least 30 FPS (no virtualization yet)
-      expect(fps.avg).toBeGreaterThanOrEqual(30)
+      expect(fps.avg).toBeGreaterThanOrEqual(60)
     } finally {
       await context.close()
     }
@@ -194,10 +192,10 @@ test.describe('FPS performance', () => {
         test: '50-object-fps-drag',
         timestamp: new Date().toISOString(),
         metrics: { avg: fps.avg, min: fps.min, p95: fps.p95, frameCount: fps.frameCount },
-        passed: fps.avg >= 50,
+        passed: fps.avg >= 60,
       })
 
-      expect(fps.avg).toBeGreaterThanOrEqual(50)
+      expect(fps.avg).toBeGreaterThanOrEqual(60)
     } finally {
       await context.close()
     }
