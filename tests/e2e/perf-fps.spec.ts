@@ -31,11 +31,12 @@ test.describe('FPS performance', () => {
       browser,
       boardId,
       USER_A_ID,
-
+      undefined,
+      { waitForRealtime: false },
     )
 
     try {
-      // Wait for all objects to load
+      // Wait for all objects to load via REST fetch
       await waitForObjectCount(page, 100, 15000)
 
       // Select the Hand tool for panning
@@ -85,11 +86,12 @@ test.describe('FPS performance', () => {
       browser,
       boardId,
       USER_A_ID,
-
+      undefined,
+      { waitForRealtime: false },
     )
 
     try {
-      // Wait for all objects to load (longer timeout for 500 objects)
+      // Wait for all objects to load via REST fetch (longer timeout for 500 objects)
       await waitForObjectCount(page, 500, 30000)
       await page.waitForTimeout(1000) // Let renderer settle
 
@@ -134,7 +136,8 @@ test.describe('FPS performance', () => {
       browser,
       boardId,
       USER_A_ID,
-
+      undefined,
+      { waitForRealtime: false },
     )
 
     try {

@@ -1,24 +1,39 @@
 import { test, expect } from '@playwright/test'
 import {
   createSupabaseClient,
+  createAnonClient,
   createBoard,
   cleanupBoard,
   seedObjects,
   openTwoUsers,
   getObjectCount,
   waitForObjectCount,
+  createTestUser,
+  deleteTestUser,
+  type TestSession,
 } from './perf-helpers'
 
 test.describe('Rapid sync (Scenario 3)', () => {
   const sb = createSupabaseClient()
+  const anonSb = createAnonClient()
   let boardId: string
+  let userA: TestSession
+  let userB: TestSession
 
   test.beforeEach(async () => {
     boardId = await createBoard(sb, `perf-rapid-${Date.now()}`)
+    ;[userA, userB] = await Promise.all([
+      createTestUser(sb, anonSb),
+      createTestUser(sb, anonSb),
+    ])
   })
 
   test.afterEach(async () => {
     await cleanupBoard(sb, boardId)
+    await Promise.all([
+      deleteTestUser(sb, userA.userId),
+      deleteTestUser(sb, userB.userId),
+    ])
   })
 
   test('20 rapid object creations all sync to second user', async ({
@@ -28,7 +43,8 @@ test.describe('Rapid sync (Scenario 3)', () => {
     const { pageA, pageB, contextA, contextB } = await openTwoUsers(
       browser,
       boardId,
-
+      undefined,
+      { sessionA: userA, sessionB: userB },
     )
 
     try {
@@ -81,7 +97,8 @@ test.describe('Rapid sync (Scenario 3)', () => {
     const { pageA, pageB, contextA, contextB } = await openTwoUsers(
       browser,
       boardId,
-
+      undefined,
+      { sessionA: userA, sessionB: userB },
     )
 
     try {
