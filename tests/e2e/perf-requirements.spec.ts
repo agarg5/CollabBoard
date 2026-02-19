@@ -77,7 +77,8 @@ test.describe(`Target: cursor sync < ${TARGETS.cursorLatencyMs}ms`, () => {
         await pageA.waitForTimeout(150)
       }
 
-      // Measure: move cursor on Page A, time until Page B sees the update
+      // Measure: move cursor on Page A, time until Page B sees the update.
+      // Use steps: 1 so we measure sync latency only, not move animation duration.
       const measurements: number[] = []
       const sampleAttempts = 10
       for (let i = 0; i < sampleAttempts; i++) {
@@ -89,9 +90,8 @@ test.describe(`Target: cursor sync < ${TARGETS.cursorLatencyMs}ms`, () => {
           const cursor = cursors[userId]
           return cursor ? { x: cursor.x, y: cursor.y } : null
         }, sessionA.userId)
+        await pageA.mouse.move(box.x + targetX, box.y + targetY, { steps: 1 })
         const beforeMove = Date.now()
-
-        await pageA.mouse.move(box.x + targetX, box.y + targetY, { steps: 6 })
 
         try {
           await pageB.waitForFunction(

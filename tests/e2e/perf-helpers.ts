@@ -396,7 +396,7 @@ export async function waitForObjectIdObservedAt(
       return objects.some((o) => o.id === id)
     }, objectId)
     if (exists) return Date.now()
-    await page.waitForTimeout(10)
+    await page.waitForTimeout(2)
   }
   return -1
 }

@@ -5,7 +5,8 @@ import { usePresenceStore } from '../store/presenceStore'
 import { getCursorColor } from '../lib/cursorColors'
 import type { CursorPosition } from '../types/board'
 
-const THROTTLE_MS = 16
+/** Target <50ms cursor latency; 8ms keeps sends frequent enough for sub-50ms RTT. */
+const THROTTLE_MS = 8
 const CURSOR_STALE_MS = 10_000
 
 /**
