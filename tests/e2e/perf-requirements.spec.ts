@@ -93,19 +93,32 @@ test.describe(`Target: cursor sync < ${TARGETS.cursorLatencyMs}ms`, () => {
       for (let i = 0; i < 5; i++) {
         const targetX = 200 + i * 50
         const targetY = 200 + i * 30
+        const previousPos = await pageB.evaluate((userId) => {
+          const store = (window as any).__presenceStore
+          const cursors = store?.getState().cursors ?? {}
+          const cursor = cursors[userId]
+          return cursor ? { x: cursor.x, y: cursor.y } : null
+        }, sessionA.userId)
         const beforeMove = Date.now()
 
         await canvas.hover({ position: { x: targetX, y: targetY } })
 
         const latency = await pageB.evaluate(
-          ({ userId, startTime }) => {
+          ({ userId, startTime, prev }) => {
             return new Promise<number>((resolve) => {
               const check = () => {
                 const store = (window as any).__presenceStore
                 const cursors = store?.getState().cursors ?? {}
-                if (userId in cursors) {
-                  resolve(Date.now() - startTime)
-                  return
+                const cursor = cursors[userId]
+                if (cursor) {
+                  const changed =
+                    !prev ||
+                    Math.abs(cursor.x - prev.x) > 0.5 ||
+                    Math.abs(cursor.y - prev.y) > 0.5
+                  if (changed) {
+                    resolve(Date.now() - startTime)
+                    return
+                  }
                 }
                 if (Date.now() - startTime > 3000) {
                   resolve(-1)
@@ -116,7 +129,7 @@ test.describe(`Target: cursor sync < ${TARGETS.cursorLatencyMs}ms`, () => {
               check()
             })
           },
-          { userId: sessionA.userId, startTime: beforeMove },
+          { userId: sessionA.userId, startTime: beforeMove, prev: previousPos },
         )
 
         if (latency > 0) measurements.push(latency)

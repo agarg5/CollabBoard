@@ -9,7 +9,7 @@ const LABEL_OFFSET_X = 12
 const LABEL_OFFSET_Y = 16
 const LABEL_PAD = 4
 const FONT_SIZE = 12
-const LERP_SPEED = 0.25 // fraction to move per frame (0–1, higher = snappier)
+const LERP_SPEED = 0.65 // fraction to move per frame (0–1, higher = snappier)
 
 interface InterpolatedCursor extends CursorPosition {
   displayX: number
