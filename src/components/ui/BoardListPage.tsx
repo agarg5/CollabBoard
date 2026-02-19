@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
-import { useBoardStore } from '../../store/boardStore'
 import { useBoardListStore } from '../../store/boardListStore'
 import { useUiStore } from '../../store/uiStore'
 import { AccountSettings } from './AccountSettings'
 import type { Board } from '../../types/board'
 
 export function BoardListPage() {
+  const navigate = useNavigate()
   const { user, signOut, deleteAccount } = useAuthStore()
-  const setBoardId = useBoardStore((s) => s.setBoardId)
   const { boards, loading, fetchBoards, createBoard, deleteBoard } = useBoardListStore()
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [newBoardName, setNewBoardName] = useState('')
@@ -197,11 +197,11 @@ export function BoardListPage() {
         key={board.id}
         role="listitem"
         data-testid="board-card"
-        onClick={() => !isDeleting && setBoardId(board.id)}
+        onClick={() => !isDeleting && navigate(`/board/${board.id}`)}
         onKeyDown={(e) => {
           if ((e.key === 'Enter' || e.key === ' ') && !isDeleting) {
             e.preventDefault()
-            setBoardId(board.id)
+            navigate(`/board/${board.id}`)
           }
         }}
         tabIndex={isDeleting ? -1 : 0}
