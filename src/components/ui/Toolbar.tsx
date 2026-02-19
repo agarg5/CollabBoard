@@ -60,19 +60,10 @@ export function Toolbar() {
   const objects = useBoardStore((s) => s.objects)
   const updateObject = useBoardStore((s) => s.updateObject)
   const deleteSelectedObjects = useBoardStore((s) => s.deleteSelectedObjects)
-  const copySelected = useBoardStore((s) => s.copySelected)
-  const pasteClipboard = useBoardStore((s) => s.pasteClipboard)
   const duplicateSelected = useBoardStore((s) => s.duplicateSelected)
-  const clipboardLength = useBoardStore((s) => s.clipboard.length)
 
   function handleDuplicate() {
     const newObjects = duplicateSelected(getValidUserId())
-    newObjects.forEach((obj) => insertObject(obj))
-    trackBatchCreate(newObjects)
-  }
-
-  function handlePaste() {
-    const newObjects = pasteClipboard(getValidUserId())
     newObjects.forEach((obj) => insertObject(obj))
     trackBatchCreate(newObjects)
   }
@@ -373,7 +364,7 @@ export function Toolbar() {
       </button>
 
       {selectedIds.length > 0 && (
-        <>
+        <div className="flex items-center gap-1">
           <div className="w-px h-6 bg-gray-300 mx-1" role="separator" />
           <button
             title="Delete (Del)"
@@ -385,7 +376,7 @@ export function Toolbar() {
               const deletedIds = deleteSelectedObjects()
               deletedIds.forEach((id) => deleteObject(id))
             }}
-            className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-red-100 text-red-600"
+            className="flex items-center justify-center px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-red-100 text-red-600"
           >
             <svg
               width="16"
@@ -393,7 +384,6 @@ export function Toolbar() {
               viewBox="0 0 16 16"
               fill="none"
               aria-hidden="true"
-              className="inline-block -mt-0.5"
             >
               <path
                 d="M5 2V1h6v1h4v2H1V2h4zM2 5h12l-1 10H3L2 5zm4 2v6m4-6v6"
@@ -408,7 +398,7 @@ export function Toolbar() {
             title="Duplicate (Ctrl+D)"
             aria-label="Duplicate selected (Ctrl+D)"
             onClick={handleDuplicate}
-            className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-gray-100"
+            className="flex items-center justify-center px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-gray-100"
           >
             <svg
               width="16"
@@ -416,55 +406,12 @@ export function Toolbar() {
               viewBox="0 0 16 16"
               fill="none"
               aria-hidden="true"
-              className="inline-block -mt-0.5"
             >
               <rect x="4" y="4" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.5" />
               <path d="M12 3V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h1" stroke="currentColor" strokeWidth="1.5" />
             </svg>
           </button>
-          <button
-            title="Copy (Ctrl+C)"
-            aria-label="Copy selected (Ctrl+C)"
-            onClick={copySelected}
-            className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-gray-100"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              aria-hidden="true"
-              className="inline-block -mt-0.5"
-            >
-              <rect x="5" y="5" width="8" height="9" rx="1" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M11 3V2a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h1" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
-          </button>
-        </>
-      )}
-
-      {clipboardLength > 0 && (
-        <>
-          <div className="w-px h-6 bg-gray-300 mx-1" role="separator" />
-          <button
-            title="Paste (Ctrl+V)"
-            aria-label="Paste from clipboard (Ctrl+V)"
-            onClick={handlePaste}
-            className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-gray-100"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              aria-hidden="true"
-              className="inline-block -mt-0.5"
-            >
-              <rect x="3" y="4" width="10" height="11" rx="1" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M6 4V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
-          </button>
-        </>
+        </div>
       )}
 
       {colorInfo && (
