@@ -1,5 +1,5 @@
-const MIN_SCALE = 0.1
-const MAX_SCALE = 5
+export const MIN_SCALE = 0.1
+export const MAX_SCALE = 5
 const SCALE_BY = 1.05
 
 export interface ZoomResult {
