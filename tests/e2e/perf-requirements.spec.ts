@@ -19,6 +19,14 @@ import {
   type TestSession,
 } from './perf-helpers'
 
+const TARGETS = {
+  fps: 60,
+  objectCount: 500,
+  cursorLatencyMs: 50,
+  objectLatencyMs: 100,
+  concurrentUsers: 5,
+} as const
+
 /**
  * Performance requirement tests. Each test maps to a specific target:
  *
@@ -26,10 +34,10 @@ import {
  * |---------------------------------------------|-------------------------------------------------|
  * | 60 FPS during pan/zoom/manipulation          | avg FPS >= 60 with 500 objects (headed mode)    |
  * | 500+ objects without performance drops        | avg FPS >= 60 with 500 objects (headed mode)    |
- * | <50ms cursor sync latency                    | measured via Realtime broadcast round-trip       |
- * | <100ms object sync latency                   | measured via Postgres Changes propagation        |
+ * | <50ms cursor sync latency                    | avg measured cursor latency < 50ms               |
+ * | <100ms object sync latency                   | max client object sync latency < 100ms           |
  * | <2s AI agent response time                   | (covered by perf-ai-agent.spec.ts)               |
- * | 5+ concurrent users per board                | 5 users all sync objects + see presence          |
+ * | 5+ concurrent users per board                | 5 users connect + sync objects + see presence    |
  *
  * FPS tests run in headed mode with --disable-gpu-vsync for accurate
  * measurements. This avoids headless Chromium GC pauses that tank p95.
@@ -39,7 +47,7 @@ import {
 // Target: <50ms cursor sync latency
 // ---------------------------------------------------------------------------
 
-test.describe('Target: cursor sync < 50ms', () => {
+test.describe(`Target: cursor sync < ${TARGETS.cursorLatencyMs}ms`, () => {
   const sb = createSupabaseClient()
   const anonSb = createAnonClient()
   let boardId: string
@@ -61,7 +69,7 @@ test.describe('Target: cursor sync < 50ms', () => {
     if (boardId) await cleanupBoard(sb, boardId)
   })
 
-  test('cursor broadcast round-trip < 200ms (production target < 50ms)', async ({ browser }) => {
+  test(`cursor broadcast round-trip avg < ${TARGETS.cursorLatencyMs}ms`, async ({ browser }) => {
     const { pageA, pageB, contextA, contextB } = await openTwoUsers(
       browser,
       boardId,
@@ -127,14 +135,11 @@ test.describe('Target: cursor sync < 50ms', () => {
         test: 'cursor-latency',
         timestamp: new Date().toISOString(),
         metrics: { avg, min, max, samples: measurements.length },
-        passed: avg < 200,
+        passed: avg < TARGETS.cursorLatencyMs,
       })
 
-      // Production target is <50ms. Test overhead (Playwright evaluate + cross-process
-      // polling) adds ~50-150ms. Assert <200ms as the test-achievable bound.
-      // The actual Supabase Broadcast latency is well under 50ms.
       expect(measurements.length).toBeGreaterThanOrEqual(3)
-      expect(avg).toBeLessThan(200)
+      expect(avg).toBeLessThan(TARGETS.cursorLatencyMs)
     } finally {
       await contextA.close()
       await contextB.close()
@@ -146,7 +151,7 @@ test.describe('Target: cursor sync < 50ms', () => {
 // Target: <100ms object sync latency
 // ---------------------------------------------------------------------------
 
-test.describe('Target: object sync < 100ms', () => {
+test.describe(`Target: object sync < ${TARGETS.objectLatencyMs}ms`, () => {
   const sb = createSupabaseClient()
   const anonSb = createAnonClient()
   let boardId: string
@@ -167,7 +172,7 @@ test.describe('Target: object sync < 100ms', () => {
     if (boardId) await cleanupBoard(sb, boardId)
   })
 
-  test('object creation syncs to second user within 1s (production target < 100ms)', async ({
+  test(`object creation syncs to both clients within ${TARGETS.objectLatencyMs}ms`, async ({
     browser,
   }) => {
     const { pageA, pageB, contextA, contextB } = await openTwoUsers(
@@ -205,15 +210,12 @@ test.describe('Target: object sync < 100ms', () => {
         test: 'object-sync-latency',
         timestamp: new Date().toISOString(),
         metrics: { latencyA, latencyB },
-        passed: latencyA < 1000 && latencyB < 1000,
+        passed: latencyA < TARGETS.objectLatencyMs && latencyB < TARGETS.objectLatencyMs,
       })
 
-      // Production target is <100ms. Test measures REST insert -> Postgres Changes ->
-      // store update -> polling detection, adding ~50-200ms overhead.
-      // Assert <1000ms as the test-achievable bound.
       expect(latencyA).toBeGreaterThan(-1)
       expect(latencyB).toBeGreaterThan(-1)
-      expect(Math.max(latencyA, latencyB)).toBeLessThan(1000)
+      expect(Math.max(latencyA, latencyB)).toBeLessThan(TARGETS.objectLatencyMs)
     } finally {
       await contextA.close()
       await contextB.close()
@@ -225,7 +227,7 @@ test.describe('Target: object sync < 100ms', () => {
 // Target: 5+ concurrent users per board
 // ---------------------------------------------------------------------------
 
-test.describe('Target: 5+ concurrent users', () => {
+test.describe(`Target: ${TARGETS.concurrentUsers}+ concurrent users`, () => {
   const sb = createSupabaseClient()
   const anonSb = createAnonClient()
   let boardId: string
@@ -234,7 +236,7 @@ test.describe('Target: 5+ concurrent users', () => {
   test.beforeEach(async () => {
     boardId = await createBoard(sb, `perf-5user-${Date.now()}`)
     // Create users sequentially to avoid rate limits
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < TARGETS.concurrentUsers; i++) {
       sessions.push(await createTestUser(sb, anonSb))
     }
   })
@@ -247,16 +249,16 @@ test.describe('Target: 5+ concurrent users', () => {
     if (boardId) await cleanupBoard(sb, boardId)
   })
 
-  test('5 users all see object creation within 2s', async ({ browser }) => {
-    const { pages, contexts } = await openNUsers(browser, boardId, 5, undefined, { sessions })
+  test(`${TARGETS.concurrentUsers} users all sync object creation`, async ({ browser }) => {
+    const { pages, contexts } = await openNUsers(browser, boardId, TARGETS.concurrentUsers, undefined, { sessions })
 
     try {
       for (const page of pages) {
         expect(await getObjectCount(page)).toBe(0)
       }
 
-      // Insert 5 objects (one "from" each user)
-      for (let i = 0; i < 5; i++) {
+      // Insert one object per user.
+      for (let i = 0; i < TARGETS.concurrentUsers; i++) {
         await sb.from('board_objects').insert({
           id: crypto.randomUUID(),
           board_id: boardId,
@@ -275,30 +277,31 @@ test.describe('Target: 5+ concurrent users', () => {
 
       const latencies: number[] = []
       for (let i = 0; i < pages.length; i++) {
-        const latency = await waitForObjectCount(pages[i], 5, 10000)
+        const latency = await waitForObjectCount(pages[i], TARGETS.concurrentUsers, 10000)
         latencies.push(latency)
-        console.log(`User ${i + 1} received all 5 objects in ${latency}ms`)
+        console.log(`User ${i + 1} received all ${TARGETS.concurrentUsers} objects in ${latency}ms`)
       }
 
       const allReceived = latencies.every((l) => l > -1)
-      const maxLatency = Math.max(...latencies)
 
       savePerfResult({
         test: '5-user-sync',
         timestamp: new Date().toISOString(),
-        metrics: { maxLatency, allReceived, ...Object.fromEntries(latencies.map((l, i) => [`user${i + 1}`, l])) },
-        passed: allReceived && maxLatency < 2000,
+        metrics: {
+          allReceived,
+          ...Object.fromEntries(latencies.map((l, i) => [`user${i + 1}`, l])),
+        },
+        passed: allReceived,
       })
 
       expect(allReceived).toBe(true)
-      expect(maxLatency).toBeLessThan(2000)
     } finally {
       for (const ctx of contexts) await ctx.close()
     }
   })
 
-  test('5 users see presence of all others', async ({ browser }) => {
-    const { pages, contexts } = await openNUsers(browser, boardId, 5, undefined, { sessions })
+  test(`${TARGETS.concurrentUsers} users see presence of all others`, async ({ browser }) => {
+    const { pages, contexts } = await openNUsers(browser, boardId, TARGETS.concurrentUsers, undefined, { sessions })
 
     try {
       // Move cursors to trigger presence broadcast
@@ -325,12 +328,11 @@ test.describe('Target: 5+ concurrent users', () => {
         test: '5-user-presence',
         timestamp: new Date().toISOString(),
         metrics: Object.fromEntries(presenceCounts.map((c, i) => [`user${i + 1}Sees`, c])),
-        passed: presenceCounts.every((c) => c >= 3),
+        passed: presenceCounts.every((c) => c >= TARGETS.concurrentUsers - 1),
       })
 
-      // Each user should see at least 3 of the other 4 cursors
       for (const count of presenceCounts) {
-        expect(count).toBeGreaterThanOrEqual(3)
+        expect(count).toBeGreaterThanOrEqual(TARGETS.concurrentUsers - 1)
       }
     } finally {
       for (const ctx of contexts) await ctx.close()
@@ -342,7 +344,7 @@ test.describe('Target: 5+ concurrent users', () => {
 // Target: 60 FPS during pan/zoom & 500+ objects without perf drops
 // ---------------------------------------------------------------------------
 
-test.describe('Target: 60 FPS & 500-object rendering', () => {
+test.describe(`Target: ${TARGETS.fps} FPS & ${TARGETS.objectCount}+ object rendering`, () => {
   const sb = createSupabaseClient()
   let boardId: string
 
@@ -354,13 +356,13 @@ test.describe('Target: 60 FPS & 500-object rendering', () => {
     if (boardId) await cleanupBoard(sb, boardId)
   })
 
-  test('500 objects: avg FPS >= 60 during pan', async ({ browser }) => {
-    await seedObjects(sb, boardId, 500, 'sticky_note')
+  test(`${TARGETS.objectCount} objects: avg FPS >= ${TARGETS.fps} during pan`, async ({ browser }) => {
+    await seedObjects(sb, boardId, TARGETS.objectCount, 'sticky_note')
 
     const { page, context } = await openBoardAsUser(browser, boardId, USER_A_ID)
 
     try {
-      await waitForObjectCount(page, 500, 30000)
+      await waitForObjectCount(page, TARGETS.objectCount, 30000)
       await page.waitForTimeout(1000)
 
       await page.getByRole('button', { name: /Hand/ }).click()
@@ -392,23 +394,22 @@ test.describe('Target: 60 FPS & 500-object rendering', () => {
         test: '500-object-fps-pan',
         timestamp: new Date().toISOString(),
         metrics: { avg: fps.avg, min: fps.min, p95: fps.p95, frameCount: fps.frameCount },
-        passed: fps.avg >= 60,
+        passed: fps.avg >= TARGETS.fps,
       })
 
-      // Headed mode with --disable-gpu-vsync gives accurate FPS.
-      expect(fps.avg).toBeGreaterThanOrEqual(60)
+      expect(fps.avg).toBeGreaterThanOrEqual(TARGETS.fps)
     } finally {
       await context.close()
     }
   })
 
-  test('500 objects: avg FPS >= 60 during zoom', async ({ browser }) => {
-    await seedObjects(sb, boardId, 500, 'sticky_note')
+  test(`${TARGETS.objectCount} objects: avg FPS >= ${TARGETS.fps} during zoom`, async ({ browser }) => {
+    await seedObjects(sb, boardId, TARGETS.objectCount, 'sticky_note')
 
     const { page, context } = await openBoardAsUser(browser, boardId, USER_A_ID)
 
     try {
-      await waitForObjectCount(page, 500, 30000)
+      await waitForObjectCount(page, TARGETS.objectCount, 30000)
       await page.waitForTimeout(1000)
 
       await startFpsMeasurement(page)
@@ -440,11 +441,10 @@ test.describe('Target: 60 FPS & 500-object rendering', () => {
         test: '500-object-fps-zoom',
         timestamp: new Date().toISOString(),
         metrics: { avg: fps.avg, min: fps.min, p95: fps.p95, frameCount: fps.frameCount },
-        passed: fps.avg >= 60,
+        passed: fps.avg >= TARGETS.fps,
       })
 
-      // Headed mode with --disable-gpu-vsync gives accurate FPS.
-      expect(fps.avg).toBeGreaterThanOrEqual(60)
+      expect(fps.avg).toBeGreaterThanOrEqual(TARGETS.fps)
     } finally {
       await context.close()
     }

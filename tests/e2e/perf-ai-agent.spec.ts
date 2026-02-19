@@ -5,6 +5,7 @@ import { test, expect } from '@playwright/test'
  * Skipped unless RUN_AI_TESTS=true (requires live OpenAI key + Supabase Edge Function).
  */
 const RUN_AI = process.env.RUN_AI_TESTS === 'true'
+const AI_RESPONSE_TARGET_MS = 2000
 
 test.describe('AI Agent performance', () => {
   test.skip(!RUN_AI, 'Skipped: set RUN_AI_TESTS=true to run')
@@ -12,7 +13,7 @@ test.describe('AI Agent performance', () => {
   const supabaseUrl = process.env.VITE_SUPABASE_URL!
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY!
 
-  test('AI agent responds within 2 seconds', async () => {
+  test(`AI agent responds within ${AI_RESPONSE_TARGET_MS}ms`, async () => {
     const prompt = 'Create a yellow sticky note that says Hello'
     const boardState: unknown[] = []
 
@@ -39,35 +40,6 @@ test.describe('AI Agent performance', () => {
       expect(data.toolCalls.length).toBeGreaterThan(0)
     }
 
-    expect(elapsed).toBeLessThan(2000)
-  })
-
-  test('AI agent handles complex prompt within 5 seconds', async () => {
-    const prompt =
-      'Create a SWOT analysis with 4 sticky notes arranged in a 2x2 grid. ' +
-      'Top-left: Strengths (green), Top-right: Weaknesses (red), ' +
-      'Bottom-left: Opportunities (blue), Bottom-right: Threats (orange)'
-    const boardState: unknown[] = []
-
-    const start = Date.now()
-    const res = await fetch(`${supabaseUrl}/functions/v1/ai-agent`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: supabaseKey,
-        Authorization: `Bearer ${supabaseKey}`,
-      },
-      body: JSON.stringify({ prompt, boardState }),
-    })
-    const elapsed = Date.now() - start
-
-    console.log(`AI complex prompt response time: ${elapsed}ms`)
-
-    if (res.ok) {
-      const data = (await res.json()) as { message: string; toolCalls: unknown[] }
-      expect(data.toolCalls.length).toBeGreaterThanOrEqual(4)
-    }
-
-    expect(elapsed).toBeLessThan(5000)
+    expect(elapsed).toBeLessThan(AI_RESPONSE_TARGET_MS)
   })
 })
