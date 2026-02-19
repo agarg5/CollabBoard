@@ -47,26 +47,38 @@ export async function createTestUser(
   const email = `test-${crypto.randomUUID().slice(0, 8)}@collabboard.test`
   const password = 'test-pass-123'
 
-  const { data: user, error: createErr } = await adminSb.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  })
-  if (createErr) throw createErr
+  // Retry with backoff to handle Supabase auth rate limits
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 2000 * attempt))
 
-  const { data: signIn, error: signInErr } = await anonSb.auth.signInWithPassword({
-    email,
-    password,
-  })
-  if (signInErr) throw signInErr
+    const { data: user, error: createErr } = await adminSb.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    })
+    if (createErr) {
+      if (attempt < 2 && createErr.message?.includes('rate limit')) continue
+      throw createErr
+    }
 
-  return {
-    userId: user.user.id,
-    email,
-    accessToken: signIn.session!.access_token,
-    refreshToken: signIn.session!.refresh_token,
-    expiresAt: signIn.session!.expires_at!,
+    const { data: signIn, error: signInErr } = await anonSb.auth.signInWithPassword({
+      email,
+      password,
+    })
+    if (signInErr) {
+      if (attempt < 2 && signInErr.message?.includes('rate limit')) continue
+      throw signInErr
+    }
+
+    return {
+      userId: user.user.id,
+      email,
+      accessToken: signIn.session!.access_token,
+      refreshToken: signIn.session!.refresh_token,
+      expiresAt: signIn.session!.expires_at!,
+    }
   }
+  throw new Error('createTestUser: exhausted retries')
 }
 
 export async function deleteTestUser(
@@ -156,7 +168,7 @@ export const ALL_USER_IDS = [USER_A_ID, USER_B_ID, USER_C_ID, USER_D_ID, USER_E_
  * @param options.session - If provided, inject a real Supabase session so
  *   the Supabase client gets a real JWT for Realtime subscriptions.
  */
-const DEFAULT_BASE_URL = process.env.BASE_URL ?? `http://localhost:${process.env.PLAYWRIGHT_PORT ?? '5173'}`
+const DEFAULT_BASE_URL = process.env.BASE_URL ?? `http://localhost:${process.env.PLAYWRIGHT_PORT ?? '5199'}`
 
 export async function openBoardAsUser(
   browser: Browser,
@@ -181,6 +193,11 @@ export async function openBoardAsUser(
   // If a real session is provided, inject it into the Supabase client
   // via setSession() so Realtime gets a valid JWT
   if (session) {
+    // Wait for __supabase to be exposed on the window (set by supabase.ts when DEV_BYPASS_AUTH)
+    await page.waitForFunction(
+      () => (window as Record<string, unknown>).__supabase != null,
+      { timeout: 10000 },
+    )
     await page.evaluate(
       async (s: { accessToken: string; refreshToken: string }) => {
         const sb = (window as Record<string, unknown>).__supabase as {
@@ -369,10 +386,13 @@ export async function openNUsers(
   boardId: string,
   n: number,
   baseURL = DEFAULT_BASE_URL,
+  options: { sessions?: TestSession[] } = {},
 ): Promise<{ pages: Page[]; contexts: BrowserContext[] }> {
   const results = await Promise.all(
-    ALL_USER_IDS.slice(0, n).map((uid) =>
-      openBoardAsUser(browser, boardId, uid, baseURL),
+    ALL_USER_IDS.slice(0, n).map((uid, i) =>
+      openBoardAsUser(browser, boardId, uid, baseURL, {
+        session: options.sessions?.[i],
+      }),
     ),
   )
   return {

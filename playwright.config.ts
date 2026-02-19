@@ -20,7 +20,8 @@ try {
   // .env file is optional (CI may set env vars directly)
 }
 
-const BASE_PORT = process.env.PLAYWRIGHT_PORT ?? '5173'
+// Use a high port unlikely to conflict with running dev servers
+const BASE_PORT = process.env.PLAYWRIGHT_PORT ?? '5199'
 const BASE_URL = process.env.BASE_URL ?? `http://localhost:${BASE_PORT}`
 
 export default defineConfig({
@@ -38,8 +39,13 @@ export default defineConfig({
       name: 'perf',
       testMatch: /perf-.*\.spec\.ts$/,
       timeout: 120_000,
+      fullyParallel: false,
+      workers: 1,
       use: {
         video: 'off',
+        // Run headed for accurate FPS measurements (headless Chromium has GC pauses)
+        headless: false,
+        launchOptions: { args: ['--disable-gpu-vsync'] },
       },
     },
   ],
