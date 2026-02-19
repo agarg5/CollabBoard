@@ -32,6 +32,8 @@ interface AuthState {
   signUpWithEmail: (email: string, password: string) => Promise<string | null>
   signOut: () => Promise<void>
   deleteAccount: () => Promise<string | null>
+  updateEmail: (email: string) => Promise<string | null>
+  updatePassword: (password: string) => Promise<string | null>
   initialize: () => () => void
 }
 
@@ -68,6 +70,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     await supabase.auth.signOut()
     set({ user: null, session: null })
+  },
+
+  updateEmail: async (email: string) => {
+    const { error } = await supabase.auth.updateUser({ email })
+    return error?.message ?? null
+  },
+
+  updatePassword: async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password })
+    return error?.message ?? null
   },
 
   deleteAccount: async () => {
