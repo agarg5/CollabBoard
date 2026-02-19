@@ -23,17 +23,15 @@ test.describe('Multi-user sync (Scenarios 1 & 2)', () => {
 
   test.beforeEach(async () => {
     boardId = await createBoard(sb, `perf-multi-${Date.now()}`)
-    ;[userA, userB] = await Promise.all([
-      createTestUser(sb, anonSb),
-      createTestUser(sb, anonSb),
-    ])
+    userA = await createTestUser(sb, anonSb)
+    userB = await createTestUser(sb, anonSb)
   })
 
   test.afterEach(async () => {
-    await cleanupBoard(sb, boardId)
+    if (boardId) await cleanupBoard(sb, boardId)
     await Promise.all([
-      deleteTestUser(sb, userA.userId),
-      deleteTestUser(sb, userB.userId),
+      userA && deleteTestUser(sb, userA.userId).catch(() => {}),
+      userB && deleteTestUser(sb, userB.userId).catch(() => {}),
     ])
   })
 
