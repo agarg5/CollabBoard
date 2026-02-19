@@ -14,7 +14,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test --project=default",
     "test:e2e:headed": "playwright test --headed",
-    "test:perf": "rm -f test-results/perf-results.json && playwright test --project=perf tests/e2e/perf-requirements.spec.ts tests/e2e/perf-ai-agent.spec.ts; node tests/e2e/perf-summary.mjs",
+    "test:perf": "PERF_RUN_ID=$(date +%s); export PERF_RUN_ID; rm -f test-results/perf-results.json && playwright test --project=perf tests/e2e/perf-requirements.spec.ts tests/e2e/perf-ai-agent.spec.ts; PERF_EXIT=$?; node tests/e2e/perf-summary.mjs; SUMMARY_EXIT=$?; test $PERF_EXIT -eq 0 -a $SUMMARY_EXIT -eq 0",
     "test:stress": "k6 run tests/stress/concurrent-users.js",
     "test:stress:ws": "k6 run tests/stress/websocket-load.js",
     "test:stress:presence": "k6 run tests/stress/presence.js",

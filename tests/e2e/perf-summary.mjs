@@ -13,8 +13,15 @@ if (!Array.isArray(results) || results.length === 0) {
   process.exit(1)
 }
 
+const runId = process.env.PERF_RUN_ID
+const scopedResults = runId ? results.filter((r) => r?.runId === runId) : results
+if (scopedResults.length === 0) {
+  console.error(`Perf summary: no results found for PERF_RUN_ID=${runId}`)
+  process.exit(1)
+}
+
 const latestByTest = new Map()
-for (const r of results) latestByTest.set(r.test, r)
+for (const r of scopedResults) latestByTest.set(r.test, r)
 
 const fmt = (v) => (typeof v === 'number' ? `${v}` : String(v))
 

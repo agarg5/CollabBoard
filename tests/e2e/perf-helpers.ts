@@ -414,6 +414,7 @@ export interface PerfResult {
   timestamp: string
   metrics: Record<string, number | string | boolean>
   passed: boolean
+  runId?: string
 }
 
 export function savePerfResult(result: PerfResult): void {
@@ -423,6 +424,9 @@ export function savePerfResult(result: PerfResult): void {
   if (existsSync(RESULTS_FILE)) {
     results = JSON.parse(readFileSync(RESULTS_FILE, 'utf-8'))
   }
-  results.push(result)
+  results.push({
+    ...result,
+    runId: process.env.PERF_RUN_ID ?? result.runId,
+  })
   writeFileSync(RESULTS_FILE, JSON.stringify(results, null, 2))
 }
