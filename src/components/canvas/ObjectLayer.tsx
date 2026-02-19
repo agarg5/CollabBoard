@@ -4,6 +4,8 @@ import type Konva from 'konva'
 import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
 import { patchObject } from '../../lib/boardSync'
+import { trackUpdate, trackBatchUpdate } from '../../hooks/useUndoRedo'
+import type { BoardObject } from '../../types/board'
 import { useVisibleObjects } from '../../hooks/useVisibleObjects'
 import { StickyNote, MIN_WIDTH as STICKY_MIN_W, MIN_HEIGHT as STICKY_MIN_H } from './StickyNote'
 import { ShapeRect, MIN_WIDTH as RECT_MIN_W, MIN_HEIGHT as RECT_MIN_H } from './ShapeRect'
@@ -44,6 +46,8 @@ export function ObjectLayer({ selectionRect, stageWidth, stageHeight }: ObjectLa
   const layerRef = useRef<Konva.Layer>(null)
   // Stores initial positions of all selected objects when multi-drag starts
   const dragStartPositions = useRef<Map<string, { x: number; y: number }>>(new Map())
+  // Stores full snapshots of objects before a drag, for undo tracking
+  const dragBeforeSnapshots = useRef<Map<string, BoardObject>>(new Map())
 
   const selectedMins = useMemo(() => {
     if (selectedIds.length !== 1) return DEFAULT_MIN
@@ -80,12 +84,17 @@ export function ObjectLayer({ selectionRect, stageWidth, stageHeight }: ObjectLa
 
   function handleDragStart(e: Konva.KonvaEventObject<DragEvent>) {
     const draggedId = e.target.id()
-    const { selectedIds: ids } = useBoardStore.getState()
+    const { selectedIds: ids, objects: allObjects } = useBoardStore.getState()
+
+    // Capture snapshots of dragged objects for undo
+    dragBeforeSnapshots.current.clear()
 
     // If dragged object is not in selection, select only it
     if (!ids.includes(draggedId)) {
       setSelectedIds([draggedId])
       dragStartPositions.current.clear()
+      const obj = allObjects.find((o) => o.id === draggedId)
+      if (obj) dragBeforeSnapshots.current.set(draggedId, { ...obj })
       return
     }
 
@@ -98,6 +107,8 @@ export function ObjectLayer({ selectionRect, stageWidth, stageHeight }: ObjectLa
       if (node) {
         dragStartPositions.current.set(id, { x: node.x(), y: node.y() })
       }
+      const obj = allObjects.find((o) => o.id === id)
+      if (obj) dragBeforeSnapshots.current.set(id, { ...obj })
     }
 
     e.target.moveToTop()
@@ -236,28 +247,42 @@ export function ObjectLayer({ selectionRect, stageWidth, stageHeight }: ObjectLa
     // If multi-drag, persist all selected objects
     if (dragStartPositions.current.size > 1) {
       const layer = layerRef.current
-      const { selectedIds: ids } = useBoardStore.getState()
+      const { selectedIds: ids, objects: allObjects } = useBoardStore.getState()
+      const undoPairs: Array<{ before: BoardObject; after: BoardObject }> = []
       for (const sid of ids) {
         const node = layer?.findOne(`#${sid}`)
         if (node) {
           const nx = node.x()
           const ny = node.y()
+          const before = dragBeforeSnapshots.current.get(sid)
           updateObject(sid, { x: nx, y: ny, updated_at })
           patchObject(sid, { x: nx, y: ny, updated_at })
+          if (before) {
+            const after = allObjects.find((o) => o.id === sid)
+            if (after) undoPairs.push({ before, after: { ...after, x: nx, y: ny, updated_at } })
+          }
         }
       }
+      trackBatchUpdate(undoPairs)
       // Update connector endpoints for all moved objects
       for (const sid of ids) {
         updateConnectorEndpoints(sid)
       }
       dragStartPositions.current.clear()
+      dragBeforeSnapshots.current.clear()
       return
     }
 
+    // Single object drag
+    const before = dragBeforeSnapshots.current.get(id)
     updateObject(id, { x, y, updated_at })
     patchObject(id, { x, y, updated_at })
+    if (before) {
+      trackUpdate(before, { ...before, x, y, updated_at })
+    }
     updateConnectorEndpoints(id)
     dragStartPositions.current.clear()
+    dragBeforeSnapshots.current.clear()
   }
 
   function handleTransformEnd(
@@ -265,8 +290,12 @@ export function ObjectLayer({ selectionRect, stageWidth, stageHeight }: ObjectLa
     attrs: { x: number; y: number; width: number; height: number; rotation?: number },
   ) {
     const updated_at = new Date().toISOString()
+    const before = objects.find((o) => o.id === id)
     updateObject(id, { ...attrs, updated_at })
     patchObject(id, { ...attrs, updated_at })
+    if (before) {
+      trackUpdate(before, { ...before, ...attrs, updated_at })
+    }
     updateConnectorEndpoints(id)
   }
 

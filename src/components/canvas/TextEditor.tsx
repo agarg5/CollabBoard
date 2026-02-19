@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
 import { patchObject } from '../../lib/boardSync'
+import { trackUpdate } from '../../hooks/useUndoRedo'
 import { PADDING as STICKY_PADDING, FONT_SIZE as STICKY_FONT_SIZE, FONT_FAMILY, LINE_HEIGHT as STICKY_LINE_HEIGHT } from './StickyNote'
 import { FONT_SIZE as TEXT_FONT_SIZE, LINE_HEIGHT as TEXT_LINE_HEIGHT, PADDING as TEXT_PADDING } from './TextObject'
 import { LABEL_FONT_SIZE as FRAME_FONT_SIZE, LABEL_PADDING as FRAME_PADDING } from './Frame'
@@ -48,6 +49,7 @@ export function TextEditor() {
     const value = textareaRef.current.value
     const updated_at = new Date().toISOString()
     const properties = { ...obj.properties, [textPropKey]: value }
+    trackUpdate({ ...obj }, { ...obj, properties, updated_at })
     updateObject(obj.id, { properties, updated_at })
     patchObject(obj.id, { properties, updated_at })
     setEditingId(null)

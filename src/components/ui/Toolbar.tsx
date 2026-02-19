@@ -2,6 +2,7 @@ import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
 import { getValidUserId } from '../../store/authStore'
 import { patchObject, deleteObject, insertObject } from '../../lib/boardSync'
+import { trackDelete, trackBatchUpdate } from '../../hooks/useUndoRedo'
 import type { BoardObject } from '../../types/board'
 
 const STICKY_COLORS = [
@@ -80,6 +81,7 @@ export function Toolbar() {
     if (!colorInfo) return
     const updated_at = new Date().toISOString()
     const selectedObjs = objects.filter((o) => selectedIds.includes(o.id))
+    const undoPairs: Array<{ before: BoardObject; after: BoardObject }> = []
     for (const obj of selectedObjs) {
       let properties: Record<string, unknown>
       if (colorInfo.isStrokeOnly) {
@@ -89,9 +91,12 @@ export function Toolbar() {
       } else {
         properties = { ...obj.properties, color }
       }
+      const after = { ...obj, properties, updated_at }
+      undoPairs.push({ before: { ...obj }, after })
       updateObject(obj.id, { properties, updated_at })
       patchObject(obj.id, { properties, updated_at })
     }
+    trackBatchUpdate(undoPairs)
   }
 
   // Determine the "active" color — show as active if all share the same color
@@ -362,6 +367,9 @@ export function Toolbar() {
           <button
             aria-label="Delete selected"
             onClick={() => {
+              const { selectedIds: ids, objects: objs } = useBoardStore.getState()
+              const deletedObjs = objs.filter((o) => ids.includes(o.id))
+              trackDelete(deletedObjs)
               const deletedIds = deleteSelectedObjects()
               deletedIds.forEach((id) => deleteObject(id))
             }}
