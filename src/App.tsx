@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Routes, Route, useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { useBoardStore } from './store/boardStore'
@@ -24,9 +24,13 @@ function BoardView() {
   const { user, signOut } = useAuthStore()
   const setBoardId = useBoardStore((s) => s.setBoardId)
   const boardName = useBoardListStore((s) => s.boards.find((b) => b.id === boardId)?.name)
+  const renameBoard = useBoardListStore((s) => s.renameBoard)
   const chatPanelOpen = useUiStore((s) => s.chatPanelOpen)
   const showAccountSettings = useUiStore((s) => s.showAccountSettings)
   const setShowAccountSettings = useUiStore((s) => s.setShowAccountSettings)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
+  const titleInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (boardId) setBoardId(boardId)
@@ -39,6 +43,30 @@ function BoardView() {
 
   function handleBackToBoards() {
     navigate('/')
+  }
+
+  function startEditingTitle() {
+    if (!boardName) return
+    setTitleDraft(boardName)
+    setEditingTitle(true)
+    setTimeout(() => {
+      titleInputRef.current?.focus()
+      titleInputRef.current?.select()
+    }, 0)
+  }
+
+  async function commitTitle() {
+    setEditingTitle(false)
+    const trimmed = titleDraft.trim()
+    if (!trimmed || !boardId || trimmed === boardName) return
+    const success = await renameBoard(boardId, trimmed)
+    if (!success) {
+      window.alert('Failed to rename board. Please try again.')
+    }
+  }
+
+  function cancelEditingTitle() {
+    setEditingTitle(false)
   }
 
   if (!boardId) return null
@@ -57,7 +85,28 @@ function BoardView() {
           {boardName && (
             <>
               <span className="text-gray-300 select-none">/</span>
-              <h1 className="text-lg font-medium text-gray-700 truncate max-w-xs">{boardName}</h1>
+              {editingTitle ? (
+                <input
+                  ref={titleInputRef}
+                  type="text"
+                  value={titleDraft}
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitTitle()
+                    if (e.key === 'Escape') cancelEditingTitle()
+                  }}
+                  onBlur={commitTitle}
+                  className="text-lg font-medium text-gray-700 max-w-xs bg-transparent border-b-2 border-blue-500 focus:outline-none"
+                />
+              ) : (
+                <h1
+                  onClick={startEditingTitle}
+                  title="Click to rename"
+                  className="text-lg font-medium text-gray-700 truncate max-w-xs cursor-pointer hover:text-blue-600 transition-colors"
+                >
+                  {boardName}
+                </h1>
+              )}
             </>
           )}
           <ConnectionStatus />

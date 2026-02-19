@@ -8,6 +8,7 @@ interface BoardListState {
   fetchBoards: (userId: string) => Promise<void>
   createBoard: (name: string, userId: string) => Promise<Board | null>
   deleteBoard: (id: string) => Promise<boolean>
+  renameBoard: (id: string, name: string) => Promise<boolean>
 }
 
 export const useBoardListStore = create<BoardListState>((set, get) => ({
@@ -70,6 +71,23 @@ export const useBoardListStore = create<BoardListState>((set, get) => ({
     }
 
     set({ boards: get().boards.filter((b) => b.id !== id) })
+    return true
+  },
+
+  renameBoard: async (id: string, name: string) => {
+    const { error } = await supabase
+      .from('boards')
+      .update({ name })
+      .eq('id', id)
+
+    if (error) {
+      console.error('Failed to rename board:', error.message)
+      return false
+    }
+
+    set({
+      boards: get().boards.map((b) => (b.id === id ? { ...b, name } : b)),
+    })
     return true
   },
 }))
