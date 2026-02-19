@@ -11,6 +11,7 @@ import { Toolbar } from './components/ui/Toolbar'
 import { PresencePanel } from './components/ui/PresencePanel'
 import { ConnectionStatus } from './components/ui/ConnectionStatus'
 import { AIChatPanel } from './components/ui/AIChatPanel'
+import { AccountSettings } from './components/ui/AccountSettings'
 import { useUiStore } from './store/uiStore'
 import './App.css'
 
@@ -18,6 +19,8 @@ function BoardView({ boardId }: { boardId: string }) {
   const { user, signOut } = useAuthStore()
   const setBoardId = useBoardStore((s) => s.setBoardId)
   const chatPanelOpen = useUiStore((s) => s.chatPanelOpen)
+  const showAccountSettings = useUiStore((s) => s.showAccountSettings)
+  const setShowAccountSettings = useUiStore((s) => s.setShowAccountSettings)
 
   const channel = useBoardChannel(boardId)
   useRealtimeSync(boardId)
@@ -39,7 +42,13 @@ function BoardView({ boardId }: { boardId: string }) {
         </div>
         <div className="flex items-center gap-3">
           <PresencePanel />
-          <span className="text-sm text-gray-500">{user!.email}</span>
+          <button
+            onClick={() => setShowAccountSettings(true)}
+            aria-label="Account settings"
+            className="text-sm text-gray-500 cursor-pointer hover:text-gray-700 hover:underline transition-colors"
+          >
+            {user!.email}
+          </button>
           <button
             onClick={signOut}
             aria-label="Sign out"
@@ -54,6 +63,7 @@ function BoardView({ boardId }: { boardId: string }) {
         <BoardCanvas broadcastCursor={broadcastCursor} />
         {chatPanelOpen && <AIChatPanel />}
       </main>
+      {showAccountSettings && <AccountSettings />}
     </div>
   )
 }
