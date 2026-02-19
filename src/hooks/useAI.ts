@@ -42,7 +42,9 @@ export function useAI() {
 
     const boardState = useBoardStore.getState().objects
     const chatMessages = useUiStore.getState().chatMessages
-    const messageHistory = chatMessages.map((m) => ({
+    // Exclude the last message — it's the current user prompt which the edge
+    // function appends separately. Without this slice the user turn is doubled.
+    const messageHistory = chatMessages.slice(0, -1).map((m) => ({
       role: m.role,
       content: m.content,
     }))
