@@ -557,7 +557,7 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
             stageY={stagePosition.y}
             scale={stageScale}
           />
-          <ObjectLayer selectionRect={selectionRect} />
+          <ObjectLayer selectionRect={selectionRect} stageWidth={dimensions.width} stageHeight={dimensions.height} />
           {connectorPreview && (
             <Layer listening={false}>
               <ConnectorPreview start={connectorPreview.start} end={connectorPreview.end} />
