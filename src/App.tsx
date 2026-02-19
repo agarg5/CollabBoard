@@ -1,10 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuthStore } from './store/authStore'
 import { useBoardStore } from './store/boardStore'
 import { useBoardChannel } from './hooks/useBoardChannel'
 import { useRealtimeSync } from './hooks/useRealtimeSync'
 import { usePresenceCursors } from './hooks/usePresenceCursors'
 import { LoginPage } from './components/auth/LoginPage'
+import { ResetPasswordPage } from './components/auth/ResetPasswordPage'
 import { BoardCanvas } from './components/canvas/BoardCanvas'
 import { BoardListPage } from './components/ui/BoardListPage'
 import { Toolbar } from './components/ui/Toolbar'
@@ -82,13 +83,25 @@ function AuthenticatedApp() {
 
 function App() {
   const { user, loading, initialize } = useAuthStore()
+  const [recoveryMode, setRecoveryMode] = useState(() => {
+    // Detect recovery token in URL hash on fresh page load
+    const hash = window.location.hash
+    return hash.includes('type=recovery')
+  })
 
   useEffect(() => {
-    const unsubscribe = initialize()
+    const unsubscribe = initialize((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecoveryMode(true)
+      } else if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        setRecoveryMode(false)
+      }
+    })
     return unsubscribe
   }, [initialize])
 
   if (loading) return renderLoading()
+  if (recoveryMode && user) return <ResetPasswordPage onComplete={() => setRecoveryMode(false)} />
   if (!user) return <LoginPage />
   return <AuthenticatedApp />
 

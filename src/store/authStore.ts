@@ -30,11 +30,12 @@ interface AuthState {
   signInWithGoogle: () => Promise<void>
   signInWithEmail: (email: string, password: string) => Promise<string | null>
   signUpWithEmail: (email: string, password: string) => Promise<string | null>
+  resetPasswordForEmail: (email: string) => Promise<string | null>
+  updatePassword: (password: string) => Promise<string | null>
   signOut: () => Promise<void>
   deleteAccount: () => Promise<string | null>
   updateEmail: (email: string) => Promise<string | null>
-  updatePassword: (password: string) => Promise<string | null>
-  initialize: () => () => void
+  initialize: (onAuthEvent?: (event: string) => void) => () => void
 }
 
 /** Returns the current user's ID if it's a valid UUID, otherwise null. */
@@ -64,6 +65,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signUpWithEmail: async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({ email, password })
+    return error?.message ?? null
+  },
+
+  resetPasswordForEmail: async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    })
     return error?.message ?? null
   },
 
@@ -108,7 +116,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     return null
   },
 
-  initialize: () => {
+  initialize: (onAuthEvent) => {
     if (DEV_BYPASS_AUTH) {
       set({ user: getDevUser(), session: null, loading: false })
       return () => {}
@@ -120,8 +128,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       set({ session, user: session?.user ?? null, loading: false })
+      onAuthEvent?.(event)
     })
 
     return () => subscription.unsubscribe()
