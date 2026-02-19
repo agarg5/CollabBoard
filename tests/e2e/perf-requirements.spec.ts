@@ -24,16 +24,15 @@ import {
  *
  * | Target                                      | Test assertion                                  |
  * |---------------------------------------------|-------------------------------------------------|
- * | 60 FPS during pan/zoom/manipulation          | avg FPS >= 60 with 100 objects                  |
- * | 500+ objects without performance drops        | avg FPS >= 30 with 500 objects (headless penalty)|
+ * | 60 FPS during pan/zoom/manipulation          | avg FPS >= 60 with 500 objects (headed mode)    |
+ * | 500+ objects without performance drops        | avg FPS >= 60 with 500 objects (headed mode)    |
  * | <50ms cursor sync latency                    | measured via Realtime broadcast round-trip       |
  * | <100ms object sync latency                   | measured via Postgres Changes propagation        |
  * | <2s AI agent response time                   | (covered by perf-ai-agent.spec.ts)               |
  * | 5+ concurrent users per board                | 5 users all sync objects + see presence          |
  *
- * Note on headless FPS: Chromium headless has unavoidable GC pauses that
- * create frame-time spikes not present in real browsers. We use avg FPS
- * as the primary assertion (reliable), and log p95/min for diagnostics.
+ * FPS tests run in headed mode with --disable-gpu-vsync for accurate
+ * measurements. This avoids headless Chromium GC pauses that tank p95.
  */
 
 // ---------------------------------------------------------------------------
@@ -355,7 +354,7 @@ test.describe('Target: 60 FPS & 500-object rendering', () => {
     if (boardId) await cleanupBoard(sb, boardId)
   })
 
-  test('500 objects: avg FPS >= 55 during pan (target 60 FPS)', async ({ browser }) => {
+  test('500 objects: avg FPS >= 60 during pan', async ({ browser }) => {
     await seedObjects(sb, boardId, 500, 'sticky_note')
 
     const { page, context } = await openBoardAsUser(browser, boardId, USER_A_ID)
@@ -393,18 +392,17 @@ test.describe('Target: 60 FPS & 500-object rendering', () => {
         test: '500-object-fps-pan',
         timestamp: new Date().toISOString(),
         metrics: { avg: fps.avg, min: fps.min, p95: fps.p95, frameCount: fps.frameCount },
-        passed: fps.avg >= 55,
+        passed: fps.avg >= 60,
       })
 
       // Headed mode with --disable-gpu-vsync gives accurate FPS.
-      // Target 60 FPS; assert >= 55 to allow small margin for test overhead.
-      expect(fps.avg).toBeGreaterThanOrEqual(55)
+      expect(fps.avg).toBeGreaterThanOrEqual(60)
     } finally {
       await context.close()
     }
   })
 
-  test('500 objects: avg FPS >= 55 during zoom (target 60 FPS)', async ({ browser }) => {
+  test('500 objects: avg FPS >= 60 during zoom', async ({ browser }) => {
     await seedObjects(sb, boardId, 500, 'sticky_note')
 
     const { page, context } = await openBoardAsUser(browser, boardId, USER_A_ID)
@@ -442,10 +440,11 @@ test.describe('Target: 60 FPS & 500-object rendering', () => {
         test: '500-object-fps-zoom',
         timestamp: new Date().toISOString(),
         metrics: { avg: fps.avg, min: fps.min, p95: fps.p95, frameCount: fps.frameCount },
-        passed: fps.avg >= 30,
+        passed: fps.avg >= 60,
       })
 
-      expect(fps.avg).toBeGreaterThanOrEqual(30)
+      // Headed mode with --disable-gpu-vsync gives accurate FPS.
+      expect(fps.avg).toBeGreaterThanOrEqual(60)
     } finally {
       await context.close()
     }
