@@ -10,6 +10,7 @@ import { CursorLayer } from './CursorLayer'
 import { TextEditor } from './TextEditor'
 import { ConnectorPreview } from './ConnectorPreview'
 import { calculateZoom } from './zoomHelper'
+import { ZoomControls } from '../ui/ZoomControls'
 import { insertObject, deleteObject } from '../../lib/boardSync'
 import type { BoardObject, ObjectType } from '../../types/board'
 
@@ -565,6 +566,9 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
           )}
           <CursorLayer />
         </Stage>
+      )}
+      {dimensions.width > 0 && (
+        <ZoomControls viewportWidth={dimensions.width} viewportHeight={dimensions.height} />
       )}
       <TextEditor />
     </div>
