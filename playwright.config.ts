@@ -53,6 +53,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     env: {
       VITE_DEV_BYPASS_AUTH: 'true',
+      VITE_DISABLE_STRICT_MODE: 'true',
     },
   },
 })

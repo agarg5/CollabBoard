@@ -19,6 +19,63 @@ export function createSupabaseClient(): SupabaseClient {
   return createClient(url, key)
 }
 
+export function createAnonClient(): SupabaseClient {
+  const url = process.env.VITE_SUPABASE_URL
+  const key = process.env.VITE_SUPABASE_ANON_KEY
+  if (!url || !key) {
+    throw new Error('VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY env vars are required')
+  }
+  return createClient(url, key)
+}
+
+// ---------------------------------------------------------------------------
+// Test user management
+// ---------------------------------------------------------------------------
+
+export interface TestSession {
+  userId: string
+  email: string
+  accessToken: string
+  refreshToken: string
+  expiresAt: number
+}
+
+export async function createTestUser(
+  adminSb: SupabaseClient,
+  anonSb: SupabaseClient,
+): Promise<TestSession> {
+  const email = `test-${crypto.randomUUID().slice(0, 8)}@collabboard.test`
+  const password = 'test-pass-123'
+
+  const { data: user, error: createErr } = await adminSb.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  })
+  if (createErr) throw createErr
+
+  const { data: signIn, error: signInErr } = await anonSb.auth.signInWithPassword({
+    email,
+    password,
+  })
+  if (signInErr) throw signInErr
+
+  return {
+    userId: user.user.id,
+    email,
+    accessToken: signIn.session!.access_token,
+    refreshToken: signIn.session!.refresh_token,
+    expiresAt: signIn.session!.expires_at!,
+  }
+}
+
+export async function deleteTestUser(
+  adminSb: SupabaseClient,
+  userId: string,
+): Promise<void> {
+  await adminSb.auth.admin.deleteUser(userId)
+}
+
 // ---------------------------------------------------------------------------
 // Board & object seeding
 // ---------------------------------------------------------------------------
@@ -92,6 +149,12 @@ export const ALL_USER_IDS = [USER_A_ID, USER_B_ID, USER_C_ID, USER_D_ID, USER_E_
 /**
  * Opens the app, sets a distinct dev user ID via localStorage, and
  * navigates to the given board by setting boardId in the Zustand store.
+ *
+ * @param options.waitForRealtime - If true (default), wait for Realtime
+ *   connection to be established. Set to false for tests that only need
+ *   objects loaded via REST fetch (e.g. FPS tests).
+ * @param options.session - If provided, inject a real Supabase session so
+ *   the Supabase client gets a real JWT for Realtime subscriptions.
  */
 const DEFAULT_BASE_URL = process.env.BASE_URL ?? `http://localhost:${process.env.PLAYWRIGHT_PORT ?? '5173'}`
 
@@ -100,7 +163,9 @@ export async function openBoardAsUser(
   boardId: string,
   userId: string,
   baseURL = DEFAULT_BASE_URL,
+  options: { waitForRealtime?: boolean; session?: TestSession } = {},
 ): Promise<{ page: Page; context: BrowserContext }> {
+  const { waitForRealtime = !!options.session, session } = options
   const context = await browser.newContext({ baseURL })
   const page = await context.newPage()
 
@@ -112,6 +177,28 @@ export async function openBoardAsUser(
   await page.goto('/')
   // Wait for board list to confirm auth bypass worked
   await page.getByText('My Boards').waitFor({ timeout: 10000 })
+
+  // If a real session is provided, inject it into the Supabase client
+  // via setSession() so Realtime gets a valid JWT
+  if (session) {
+    await page.evaluate(
+      async (s: { accessToken: string; refreshToken: string }) => {
+        const sb = (window as Record<string, unknown>).__supabase as {
+          auth: {
+            setSession: (params: {
+              access_token: string
+              refresh_token: string
+            }) => Promise<unknown>
+          }
+        }
+        await sb.auth.setSession({
+          access_token: s.accessToken,
+          refresh_token: s.refreshToken,
+        })
+      },
+      { accessToken: session.accessToken, refreshToken: session.refreshToken },
+    )
+  }
 
   // Navigate to board by setting boardId in Zustand store
   await page.evaluate((bid: string) => {
@@ -127,14 +214,27 @@ export async function openBoardAsUser(
   // Wait for canvas toolbar to confirm board loaded
   await page.getByRole('button', { name: /Select/ }).waitFor({ timeout: 15000 })
 
-  // Wait for Realtime subscription to be fully established
-  await page.waitForFunction(
-    () => {
-      const store = (window as any).__connectionStore
-      return store?.getState().status === 'connected'
-    },
-    { timeout: 15000 },
-  )
+  if (waitForRealtime) {
+    // Wait for Realtime subscription to be fully established
+    await page.waitForFunction(
+      () => {
+        const store = (window as any).__connectionStore
+        const status = store?.getState().status
+        return status === 'connected'
+      },
+      { timeout: 15000 },
+    )
+  } else {
+    // Just wait for connection attempt to settle (connected, error, or reconnecting)
+    await page.waitForFunction(
+      () => {
+        const store = (window as any).__connectionStore
+        const status = store?.getState().status
+        return status && status !== 'connecting'
+      },
+      { timeout: 15000 },
+    )
+  }
 
   return { page, context }
 }
@@ -143,15 +243,28 @@ export async function openTwoUsers(
   browser: Browser,
   boardId: string,
   baseURL = DEFAULT_BASE_URL,
+  options: {
+    waitForRealtime?: boolean
+    sessionA?: TestSession
+    sessionB?: TestSession
+  } = {},
 ): Promise<{
   pageA: Page
   pageB: Page
   contextA: BrowserContext
   contextB: BrowserContext
 }> {
+  const userAId = options.sessionA?.userId ?? USER_A_ID
+  const userBId = options.sessionB?.userId ?? USER_B_ID
   const [a, b] = await Promise.all([
-    openBoardAsUser(browser, boardId, USER_A_ID, baseURL),
-    openBoardAsUser(browser, boardId, USER_B_ID, baseURL),
+    openBoardAsUser(browser, boardId, userAId, baseURL, {
+      waitForRealtime: options.waitForRealtime,
+      session: options.sessionA,
+    }),
+    openBoardAsUser(browser, boardId, userBId, baseURL, {
+      waitForRealtime: options.waitForRealtime,
+      session: options.sessionB,
+    }),
   ])
   return {
     pageA: a.page,
@@ -255,7 +368,7 @@ export async function openNUsers(
   browser: Browser,
   boardId: string,
   n: number,
-  baseURL = 'http://localhost:5173',
+  baseURL = DEFAULT_BASE_URL,
 ): Promise<{ pages: Page[]; contexts: BrowserContext[] }> {
   const results = await Promise.all(
     ALL_USER_IDS.slice(0, n).map((uid) =>

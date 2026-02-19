@@ -1,25 +1,39 @@
 import { test, expect, type CDPSession } from '@playwright/test'
 import {
   createSupabaseClient,
+  createAnonClient,
   createBoard,
   cleanupBoard,
   openBoardAsUser,
   openTwoUsers,
-  USER_A_ID,
   getObjectCount,
   waitForObjectCount,
+  createTestUser,
+  deleteTestUser,
+  type TestSession,
 } from './perf-helpers'
 
 test.describe('Network resilience (Scenario 4)', () => {
   const sb = createSupabaseClient()
+  const anonSb = createAnonClient()
   let boardId: string
+  let userA: TestSession
+  let userB: TestSession
 
   test.beforeEach(async () => {
     boardId = await createBoard(sb, `perf-network-${Date.now()}`)
+    ;[userA, userB] = await Promise.all([
+      createTestUser(sb, anonSb),
+      createTestUser(sb, anonSb),
+    ])
   })
 
   test.afterEach(async () => {
     await cleanupBoard(sb, boardId)
+    await Promise.all([
+      deleteTestUser(sb, userA.userId),
+      deleteTestUser(sb, userB.userId),
+    ])
   })
 
   test('survives slow 3G network conditions', async ({ browser }) => {
@@ -27,8 +41,9 @@ test.describe('Network resilience (Scenario 4)', () => {
     const { page, context } = await openBoardAsUser(
       browser,
       boardId,
-      USER_A_ID,
-
+      userA.userId,
+      undefined,
+      { session: userA },
     )
 
     try {
@@ -101,6 +116,10 @@ test.describe('Network resilience (Scenario 4)', () => {
         .getByRole('button', { name: /Select/ })
         .waitFor({ timeout: 15000 })
 
+      // Wait for objects to load from DB after reload
+      const loaded = await waitForObjectCount(page, 4, 10000)
+      expect(loaded).toBeGreaterThan(-1)
+
       const count = await getObjectCount(page)
       expect(count).toBe(4)
     } finally {
@@ -113,8 +132,9 @@ test.describe('Network resilience (Scenario 4)', () => {
     const { page, context } = await openBoardAsUser(
       browser,
       boardId,
-      USER_A_ID,
-
+      userA.userId,
+      undefined,
+      { session: userA },
     )
 
     try {
@@ -159,7 +179,8 @@ test.describe('Network resilience (Scenario 4)', () => {
     const { pageA, pageB, contextA, contextB } = await openTwoUsers(
       browser,
       boardId,
-
+      undefined,
+      { sessionA: userA, sessionB: userB },
     )
 
     try {
