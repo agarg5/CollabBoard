@@ -147,6 +147,11 @@ npm run test:watch   # Vitest in watch mode
 npm run test:e2e     # Playwright E2E tests
 ```
 
+## Submission Documents
+
+- [AI Development Log](./AI_DEV_LOG.md) — Tools, workflow, effective prompts, and learnings
+- [AI Cost Analysis](./AI_COST_ANALYSIS.md) — Development costs and production projections
+
 ## Performance Targets
 
 - 60 FPS during pan/zoom/object manipulation
