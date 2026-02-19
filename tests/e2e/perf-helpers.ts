@@ -86,11 +86,13 @@ export const USER_B_ID = '00000000-0000-0000-0000-00000000000b'
  * Opens the app, sets a distinct dev user ID via localStorage, and
  * navigates to the given board by setting boardId in the Zustand store.
  */
+const DEFAULT_BASE_URL = process.env.BASE_URL ?? `http://localhost:${process.env.PLAYWRIGHT_PORT ?? '5173'}`
+
 export async function openBoardAsUser(
   browser: Browser,
   boardId: string,
   userId: string,
-  baseURL = 'http://localhost:5173',
+  baseURL = DEFAULT_BASE_URL,
 ): Promise<{ page: Page; context: BrowserContext }> {
   const context = await browser.newContext({ baseURL })
   const page = await context.newPage()
@@ -133,7 +135,7 @@ export async function openBoardAsUser(
 export async function openTwoUsers(
   browser: Browser,
   boardId: string,
-  baseURL = 'http://localhost:5173',
+  baseURL = DEFAULT_BASE_URL,
 ): Promise<{
   pageA: Page
   pageB: Page
