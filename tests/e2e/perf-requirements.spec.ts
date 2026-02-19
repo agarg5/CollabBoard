@@ -82,17 +82,18 @@ test.describe(`Target: cursor sync < ${TARGETS.cursorLatencyMs}ms`, () => {
       const box = await canvas.boundingBox()
       if (!box) throw new Error('Canvas not found')
 
-      // Warm up the broadcast channel
+      // Warm up the broadcast channel with real pointer moves.
       for (let i = 0; i < 5; i++) {
-        await canvas.hover({ position: { x: 100 + i * 10, y: 100 } })
+        await pageA.mouse.move(box.x + 100 + i * 10, box.y + 100, { steps: 4 })
         await pageA.waitForTimeout(150)
       }
 
       // Measure: move cursor on Page A, time until Page B sees the update
       const measurements: number[] = []
-      for (let i = 0; i < 5; i++) {
-        const targetX = 200 + i * 50
-        const targetY = 200 + i * 30
+      const sampleAttempts = 10
+      for (let i = 0; i < sampleAttempts; i++) {
+        const targetX = 180 + (i % 5) * 60
+        const targetY = 160 + Math.floor(i / 5) * 80
         const previousPos = await pageB.evaluate((userId) => {
           const store = (window as any).__presenceStore
           const cursors = store?.getState().cursors ?? {}
@@ -101,39 +102,45 @@ test.describe(`Target: cursor sync < ${TARGETS.cursorLatencyMs}ms`, () => {
         }, sessionA.userId)
         const beforeMove = Date.now()
 
-        await canvas.hover({ position: { x: targetX, y: targetY } })
+        await pageA.mouse.move(box.x + targetX, box.y + targetY, { steps: 6 })
 
-        const latency = await pageB.evaluate(
-          ({ userId, startTime, prev }) => {
-            return new Promise<number>((resolve) => {
-              const check = () => {
-                const store = (window as any).__presenceStore
-                const cursors = store?.getState().cursors ?? {}
-                const cursor = cursors[userId]
-                if (cursor) {
-                  const changed =
-                    !prev ||
-                    Math.abs(cursor.x - prev.x) > 0.5 ||
-                    Math.abs(cursor.y - prev.y) > 0.5
-                  if (changed) {
-                    resolve(Date.now() - startTime)
-                    return
-                  }
-                }
-                if (Date.now() - startTime > 3000) {
-                  resolve(-1)
-                  return
-                }
-                setTimeout(check, 5)
-              }
-              check()
-            })
-          },
-          { userId: sessionA.userId, startTime: beforeMove, prev: previousPos },
-        )
+        try {
+          await pageB.waitForFunction(
+            ({ userId, expectedX, expectedY, prev }) => {
+              const store = (window as any).__presenceStore
+              const cursors = store?.getState().cursors ?? {}
+              const cursor = cursors[userId]
+              if (!cursor) return false
 
-        if (latency > 0) measurements.push(latency)
+              const closeToTarget =
+                Math.abs(cursor.x - expectedX) <= 30 &&
+                Math.abs(cursor.y - expectedY) <= 30
+              if (!closeToTarget) return false
+
+              if (!prev) return true
+              return (
+                Math.abs(cursor.x - prev.x) > 0.5 ||
+                Math.abs(cursor.y - prev.y) > 0.5
+              )
+            },
+            {
+              userId: sessionA.userId,
+              expectedX: targetX,
+              expectedY: targetY,
+              prev: previousPos,
+            },
+            { timeout: 3000 },
+          )
+          measurements.push(Date.now() - beforeMove)
+        } catch {
+          // Ignore this sample if no matching cursor update arrives in time.
+        }
+
         await pageA.waitForTimeout(150)
+      }
+
+      if (measurements.length === 0) {
+        throw new Error('No cursor updates observed on receiver page')
       }
 
       const avg = Math.round(measurements.reduce((s, v) => s + v, 0) / measurements.length)
