@@ -377,6 +377,30 @@ export async function waitForObjectCount(
   return -1
 }
 
+/**
+ * Waits until a specific object ID exists in the board store.
+ * Returns the wall-clock timestamp when observed, or -1 on timeout.
+ */
+export async function waitForObjectIdObservedAt(
+  page: Page,
+  objectId: string,
+  timeoutMs = 5000,
+): Promise<number> {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    const exists = await page.evaluate((id: string) => {
+      const store = (window as Record<string, unknown>).__boardStore as
+        | { getState: () => { objects: Array<{ id: string }> } }
+        | undefined
+      const objects = store?.getState().objects ?? []
+      return objects.some((o) => o.id === id)
+    }, objectId)
+    if (exists) return Date.now()
+    await page.waitForTimeout(10)
+  }
+  return -1
+}
+
 // ---------------------------------------------------------------------------
 // N-user helper
 // ---------------------------------------------------------------------------

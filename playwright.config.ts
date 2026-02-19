@@ -22,7 +22,8 @@ try {
 
 // Use a high port unlikely to conflict with running dev servers
 const BASE_PORT = process.env.PLAYWRIGHT_PORT ?? '5199'
-const BASE_URL = process.env.BASE_URL ?? `http://localhost:${BASE_PORT}`
+const BASE_HOST = process.env.PLAYWRIGHT_HOST ?? '127.0.0.1'
+const BASE_URL = process.env.BASE_URL ?? `http://${BASE_HOST}:${BASE_PORT}`
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -52,7 +53,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: `npm run dev -- --port ${BASE_PORT} --strictPort`,
+    command: `npm run dev -- --host ${BASE_HOST} --port ${BASE_PORT} --strictPort`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     env: {

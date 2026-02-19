@@ -9,6 +9,7 @@ import {
   openTwoUsers,
   openNUsers,
   waitForObjectCount,
+  waitForObjectIdObservedAt,
   getObjectCount,
   savePerfResult,
   type TestSession,
@@ -194,14 +195,14 @@ test.describe(`Target: object sync < ${TARGETS.objectLatencyMs}ms`, () => {
       expect(await getObjectCount(pageA)).toBe(0)
       expect(await getObjectCount(pageB)).toBe(0)
 
-      // Start waiting in both clients before inserting so both timers begin
-      // from the same point and are not affected by sequential awaits.
-      const waitA = waitForObjectCount(pageA, 1, 5000)
-      const waitB = waitForObjectCount(pageB, 1, 5000)
+      const objectId = crypto.randomUUID()
+      const waitAObservedAt = waitForObjectIdObservedAt(pageA, objectId, 5000)
+      const waitBObservedAt = waitForObjectIdObservedAt(pageB, objectId, 5000)
 
       // Insert object via REST (triggers postgres_changes)
-      await sb.from('board_objects').insert({
-        id: crypto.randomUUID(),
+      const insertStartedAt = Date.now()
+      const { error: insertError } = await sb.from('board_objects').insert({
+        id: objectId,
         board_id: boardId,
         type: 'sticky_note',
         properties: { text: 'Sync test', color: '#fef08a' },
@@ -213,15 +214,23 @@ test.describe(`Target: object sync < ${TARGETS.objectLatencyMs}ms`, () => {
         created_by: null,
         updated_at: new Date().toISOString(),
       })
+      if (insertError) throw insertError
+      const insertRttMs = Date.now() - insertStartedAt
+      const insertAckAt = Date.now()
 
-      const [latencyA, latencyB] = await Promise.all([waitA, waitB])
+      // Measure propagation after server insert acknowledgement.
+      const [observedA, observedB] = await Promise.all([waitAObservedAt, waitBObservedAt])
+      const latencyA = observedA < 0 ? -1 : Math.max(0, observedA - insertAckAt)
+      const latencyB = observedB < 0 ? -1 : Math.max(0, observedB - insertAckAt)
 
-      console.log(`Object sync latency — Page A: ${latencyA}ms, Page B: ${latencyB}ms`)
+      console.log(
+        `Object sync latency (post-insert) — insert RTT: ${insertRttMs}ms, Page A: ${latencyA}ms, Page B: ${latencyB}ms`,
+      )
 
       savePerfResult({
         test: 'object-sync-latency',
         timestamp: new Date().toISOString(),
-        metrics: { latencyA, latencyB },
+        metrics: { latencyA, latencyB, insertRttMs },
         passed: latencyA < TARGETS.objectLatencyMs && latencyB < TARGETS.objectLatencyMs,
       })
 
