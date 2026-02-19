@@ -106,6 +106,7 @@ export function Toolbar() {
     <nav className="flex items-center gap-2 px-4 py-2 border-b border-gray-200" aria-label="Canvas tools">
       <button
         onClick={() => setTool('select')}
+        title="Select"
         aria-label="Select tool"
         aria-pressed={tool === 'select'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
@@ -131,6 +132,7 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('hand')}
+        title="Hand / Pan (Space)"
         aria-label="Hand (pan) tool"
         aria-pressed={tool === 'hand'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
@@ -157,6 +159,7 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('sticky_note')}
+        title="Sticky Note"
         aria-label="Sticky note tool"
         aria-pressed={tool === 'sticky_note'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
@@ -187,6 +190,7 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('rectangle')}
+        title="Rectangle"
         aria-label="Rectangle tool"
         aria-pressed={tool === 'rectangle'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
@@ -214,6 +218,7 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('circle')}
+        title="Circle"
         aria-label="Circle tool"
         aria-pressed={tool === 'circle'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
@@ -241,6 +246,7 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('line')}
+        title="Line"
         aria-label="Line tool"
         aria-pressed={tool === 'line'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
@@ -269,6 +275,7 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('connector')}
+        title="Connector"
         aria-label="Connector tool"
         aria-pressed={tool === 'connector'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
@@ -301,6 +308,7 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('frame')}
+        title="Frame"
         aria-label="Frame tool"
         aria-pressed={tool === 'frame'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
@@ -332,6 +340,7 @@ export function Toolbar() {
       </button>
       <button
         onClick={() => setTool('text')}
+        title="Text"
         aria-label="Text tool"
         aria-pressed={tool === 'text'}
         className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
@@ -360,6 +369,7 @@ export function Toolbar() {
         <>
           <div className="w-px h-6 bg-gray-300 mx-1" role="separator" />
           <button
+            title="Delete (Del)"
             aria-label="Delete selected"
             onClick={() => {
               const deletedIds = deleteSelectedObjects()
@@ -385,6 +395,7 @@ export function Toolbar() {
             </svg>
           </button>
           <button
+            title="Duplicate (Ctrl+D)"
             aria-label="Duplicate selected (Ctrl+D)"
             onClick={handleDuplicate}
             className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-gray-100"
@@ -402,6 +413,7 @@ export function Toolbar() {
             </svg>
           </button>
           <button
+            title="Copy (Ctrl+C)"
             aria-label="Copy selected (Ctrl+C)"
             onClick={copySelected}
             className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-gray-100"
@@ -425,6 +437,7 @@ export function Toolbar() {
         <>
           <div className="w-px h-6 bg-gray-300 mx-1" role="separator" />
           <button
+            title="Paste (Ctrl+V)"
             aria-label="Paste from clipboard (Ctrl+V)"
             onClick={handlePaste}
             className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-gray-100"
@@ -450,6 +463,7 @@ export function Toolbar() {
           {colorInfo.palette.map((c) => (
             <button
               key={c.value}
+              title={c.name}
               aria-label={`${c.name} color${activeColor === c.value ? ' (selected)' : ''}`}
               onClick={() => handleColorChange(c.value)}
               className={`w-6 h-6 rounded-full cursor-pointer border-2 transition-transform hover:scale-110 ${
@@ -466,6 +480,7 @@ export function Toolbar() {
       <div className="ml-auto flex items-center">
         <div className="w-px h-6 bg-gray-300 mx-1" role="separator" />
         <button
+          title="AI Assistant"
           aria-label="AI Assistant"
           aria-pressed={chatPanelOpen}
           onClick={() => setChatPanelOpen(!chatPanelOpen)}

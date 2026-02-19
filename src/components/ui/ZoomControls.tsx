@@ -57,6 +57,7 @@ export function ZoomControls({ viewportWidth, viewportHeight }: ZoomControlsProp
         type="button"
         onClick={handleZoomOut}
         disabled={atMinScale}
+        title="Zoom out"
         aria-label="Zoom out"
         className="flex h-8 w-8 items-center justify-center rounded text-lg font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
       >
@@ -72,6 +73,7 @@ export function ZoomControls({ viewportWidth, viewportHeight }: ZoomControlsProp
         type="button"
         onClick={handleZoomIn}
         disabled={atMaxScale}
+        title="Zoom in"
         aria-label="Zoom in"
         className="flex h-8 w-8 items-center justify-center rounded text-lg font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
       >
