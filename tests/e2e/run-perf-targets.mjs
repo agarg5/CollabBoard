@@ -28,13 +28,13 @@ const targets = [
   {
     id: 'fps-pan',
     label: '60 FPS with 500 objects during pan',
-    file: 'tests/e2e/perf-requirements.spec.ts',
+    file: 'tests/e2e/perf-requirements-fps.spec.ts',
     grep: '500 objects: avg FPS >= 60 during pan',
   },
   {
     id: 'fps-zoom',
     label: '60 FPS with 500 objects during zoom',
-    file: 'tests/e2e/perf-requirements.spec.ts',
+    file: 'tests/e2e/perf-requirements-fps.spec.ts',
     grep: '500 objects: avg FPS >= 60 during zoom',
   },
   {
