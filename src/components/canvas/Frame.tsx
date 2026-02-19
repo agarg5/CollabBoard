@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { Group, Rect, Text } from 'react-konva'
 import type Konva from 'konva'
 import type { BoardObject } from '../../types/board'
 import { FONT_FAMILY } from './StickyNote'
+import { useCachedNode } from '../../hooks/useCachedNode'
 
 interface FrameProps {
   obj: BoardObject
@@ -33,6 +35,11 @@ export function Frame({
 }: FrameProps) {
   const strokeColor = (obj.properties.strokeColor as string) || '#94a3b8'
   const label = (obj.properties.label as string) || ''
+  const [isDragging, setIsDragging] = useState(false)
+
+  const shouldCache = !isSelected && !isEditing && !isDragging
+  const cacheKey = `${obj.width}-${obj.height}-${strokeColor}-${label}`
+  const groupRef = useCachedNode(shouldCache, cacheKey)
 
   function handleDragEnd(e: Konva.KonvaEventObject<DragEvent>) {
     onDragEnd(obj.id, e.target.x(), e.target.y())
@@ -54,6 +61,7 @@ export function Frame({
 
   return (
     <Group
+      ref={groupRef}
       id={obj.id}
       x={obj.x}
       y={obj.y}
@@ -62,9 +70,9 @@ export function Frame({
       draggable
       onClick={(e) => onSelect(obj.id, e)}
       onTap={() => onSelect(obj.id)}
-      onDragStart={onDragStart}
+      onDragStart={(e) => { setIsDragging(true); onDragStart(e) }}
       onDragMove={onDragMove}
-      onDragEnd={handleDragEnd}
+      onDragEnd={(e) => { setIsDragging(false); handleDragEnd(e) }}
       onTransformEnd={handleTransformEnd}
       onDblClick={() => onDoubleClick(obj.id)}
       onDblTap={() => onDoubleClick(obj.id)}

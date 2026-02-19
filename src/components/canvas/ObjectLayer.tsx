@@ -4,6 +4,7 @@ import type Konva from 'konva'
 import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
 import { patchObject } from '../../lib/boardSync'
+import { useVisibleObjects } from '../../hooks/useVisibleObjects'
 import { StickyNote, MIN_WIDTH as STICKY_MIN_W, MIN_HEIGHT as STICKY_MIN_H } from './StickyNote'
 import { ShapeRect, MIN_WIDTH as RECT_MIN_W, MIN_HEIGHT as RECT_MIN_H } from './ShapeRect'
 import { ShapeCircle, MIN_WIDTH as CIRCLE_MIN_W, MIN_HEIGHT as CIRCLE_MIN_H } from './ShapeCircle'
@@ -26,9 +27,12 @@ const DEFAULT_MIN = { width: 50, height: 50 }
 
 interface ObjectLayerProps {
   selectionRect: SelectionRect | null
+  stageWidth: number
+  stageHeight: number
 }
 
-export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
+export function ObjectLayer({ selectionRect, stageWidth, stageHeight }: ObjectLayerProps) {
+  const visibleObjects = useVisibleObjects({ stageWidth, stageHeight })
   const objects = useBoardStore((s) => s.objects)
   const selectedIds = useBoardStore((s) => s.selectedIds)
   const setSelectedIds = useBoardStore((s) => s.setSelectedIds)
@@ -270,7 +274,7 @@ export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
 
   return (
     <Layer ref={layerRef}>
-      {[...objects].sort((a, b) => a.z_index - b.z_index).map((obj) => {
+      {[...visibleObjects].sort((a, b) => a.z_index - b.z_index).map((obj) => {
         const isSelected = selectedIds.includes(obj.id)
         if (obj.type === 'sticky_note') {
           return (
@@ -293,6 +297,8 @@ export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
             <ShapeRect
               key={obj.id}
               obj={obj}
+              isSelected={isSelected}
+              isEditing={editingId === obj.id}
               onSelect={handleSelect}
               onDragStart={handleDragStart}
               onDragMove={handleDragMove}
@@ -306,6 +312,8 @@ export function ObjectLayer({ selectionRect }: ObjectLayerProps) {
             <ShapeCircle
               key={obj.id}
               obj={obj}
+              isSelected={isSelected}
+              isEditing={editingId === obj.id}
               onSelect={handleSelect}
               onDragStart={handleDragStart}
               onDragMove={handleDragMove}

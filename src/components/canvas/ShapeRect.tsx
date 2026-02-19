@@ -1,9 +1,13 @@
+import { useState } from 'react'
 import { Group, Rect } from 'react-konva'
 import type Konva from 'konva'
 import type { BoardObject } from '../../types/board'
+import { useCachedNode } from '../../hooks/useCachedNode'
 
 interface ShapeRectProps {
   obj: BoardObject
+  isSelected: boolean
+  isEditing: boolean
   onSelect: (id: string, e?: Konva.KonvaEventObject<MouseEvent>) => void
   onDragStart: (e: import('konva').default.KonvaEventObject<DragEvent>) => void
   onDragMove?: (e: import('konva').default.KonvaEventObject<DragEvent>) => void
@@ -16,6 +20,8 @@ export const MIN_HEIGHT = 50
 
 export function ShapeRect({
   obj,
+  isSelected,
+  isEditing,
   onSelect,
   onDragStart,
   onDragMove,
@@ -25,6 +31,11 @@ export function ShapeRect({
   const fillColor = (obj.properties.fillColor as string) || '#3b82f6'
   const strokeColor = (obj.properties.strokeColor as string) || '#1e293b'
   const strokeWidth = (obj.properties.strokeWidth as number) || 2
+  const [isDragging, setIsDragging] = useState(false)
+
+  const shouldCache = !isSelected && !isEditing && !isDragging
+  const cacheKey = `${obj.width}-${obj.height}-${fillColor}-${strokeColor}-${strokeWidth}`
+  const groupRef = useCachedNode(shouldCache, cacheKey)
 
   function handleDragEnd(e: Konva.KonvaEventObject<DragEvent>) {
     onDragEnd(obj.id, e.target.x(), e.target.y())
@@ -47,6 +58,7 @@ export function ShapeRect({
 
   return (
     <Group
+      ref={groupRef}
       id={obj.id}
       x={obj.x}
       y={obj.y}
@@ -56,9 +68,9 @@ export function ShapeRect({
       draggable
       onClick={(e) => onSelect(obj.id, e)}
       onTap={() => onSelect(obj.id)}
-      onDragStart={onDragStart}
+      onDragStart={(e) => { setIsDragging(true); onDragStart(e) }}
       onDragMove={onDragMove}
-      onDragEnd={handleDragEnd}
+      onDragEnd={(e) => { setIsDragging(false); handleDragEnd(e) }}
       onTransformEnd={handleTransformEnd}
     >
       <Rect
