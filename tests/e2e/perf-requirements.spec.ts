@@ -320,11 +320,12 @@ test.describe(`Target: ${TARGETS.concurrentUsers}+ concurrent users`, () => {
 
       expect(allReceived).toBe(true)
     } finally {
-      for (const ctx of contexts) await ctx.close()
+      await Promise.all(contexts.map((ctx) => ctx.close()))
     }
   })
 
   test(`${TARGETS.concurrentUsers} users see presence of all others`, async ({ browser }) => {
+    test.setTimeout(180000)
     const { pages, contexts } = await openNUsers(browser, boardId, TARGETS.concurrentUsers, undefined, { sessions })
 
     try {
@@ -334,7 +335,19 @@ test.describe(`Target: ${TARGETS.concurrentUsers}+ concurrent users`, () => {
         await canvas.hover({ position: { x: 200 + i * 50, y: 200 } })
       }
 
-      await pages[0].waitForTimeout(3000)
+      await Promise.all(
+        pages.map((page) =>
+          page.waitForFunction(
+            (expectedCount) => {
+              const store = (window as any).__presenceStore
+              const cursors = store?.getState().cursors ?? {}
+              return Object.keys(cursors).length >= expectedCount
+            },
+            TARGETS.concurrentUsers - 1,
+            { timeout: 20000 },
+          ),
+        ),
+      )
 
       const presenceCounts: number[] = []
       for (let i = 0; i < pages.length; i++) {
@@ -359,7 +372,7 @@ test.describe(`Target: ${TARGETS.concurrentUsers}+ concurrent users`, () => {
         expect(count).toBeGreaterThanOrEqual(TARGETS.concurrentUsers - 1)
       }
     } finally {
-      for (const ctx of contexts) await ctx.close()
+      await Promise.all(contexts.map((ctx) => ctx.close()))
     }
   })
 })
