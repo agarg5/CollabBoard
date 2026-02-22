@@ -80,19 +80,23 @@ export function Toolbar() {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
-        const { boardId } = useBoardStore.getState()
-        if (!boardId) return
-        const newObjects = parseBoardJson(reader.result as string, boardId, getValidUserId())
-        const { objects: existing } = useBoardStore.getState()
+        const { boardId, objects: existing } = useBoardStore.getState()
+        if (!boardId) {
+          alert('No board loaded')
+          return
+        }
+        const maxZ = existing.reduce((max, o) => Math.max(max, o.z_index), 0)
+        const newObjects = parseBoardJson(reader.result as string, boardId, getValidUserId(), maxZ)
         useBoardStore.getState().setObjects([...existing, ...newObjects])
-        newObjects.forEach((obj) => insertObject(obj))
         trackBatchCreate(newObjects)
+        await Promise.all(newObjects.map((obj) => insertObject(obj)))
       } catch (err) {
         alert(`Import failed: ${(err as Error).message}`)
       }
     }
+    reader.onerror = () => alert('Failed to read file')
     reader.readAsText(file)
     // Reset so the same file can be re-imported
     e.target.value = ''

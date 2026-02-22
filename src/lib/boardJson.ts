@@ -10,6 +10,8 @@ const VALID_TYPES: Set<string> = new Set([
   'text',
 ])
 
+const MAX_IMPORT_OBJECTS = 5000
+
 interface BoardExport {
   version: 1
   exportedAt: string
@@ -23,11 +25,12 @@ export function exportBoardJson(objects: BoardObject[], boardName: string) {
     exportedAt: new Date().toISOString(),
     objects,
   }
+  const safeName = (boardName || 'board').replace(/[^a-zA-Z0-9_-]/g, '_')
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `${boardName || 'board'}-export.json`
+  a.download = `${safeName}-export.json`
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -37,6 +40,7 @@ export function parseBoardJson(
   json: string,
   boardId: string,
   userId: string | null,
+  existingMaxZ: number,
 ): BoardObject[] {
   const data = JSON.parse(json) as unknown
 
@@ -51,7 +55,11 @@ export function parseBoardJson(
     throw new Error('Invalid format: expected an array of objects or { version, objects }')
   }
 
-  const maxZ = Date.now() // Ensures imported objects stack above existing ones
+  if (rawObjects.length > MAX_IMPORT_OBJECTS) {
+    throw new Error(`Import limited to ${MAX_IMPORT_OBJECTS} objects (got ${rawObjects.length})`)
+  }
+
+  const baseZ = existingMaxZ + 1
   const now = new Date().toISOString()
 
   return rawObjects.map((item, i) => {
@@ -64,16 +72,32 @@ export function parseBoardJson(
       throw new Error(`Object ${i}: missing x/y coordinates`)
     }
 
+    // Validate properties is a plain object
+    const props = obj.properties
+    if (props != null && (typeof props !== 'object' || Array.isArray(props))) {
+      throw new Error(`Object ${i}: properties must be an object`)
+    }
+
+    // Validate width/height are positive numbers if provided
+    const width = obj.width != null ? obj.width : 150
+    const height = obj.height != null ? obj.height : 150
+    if (typeof width !== 'number' || width <= 0) {
+      throw new Error(`Object ${i}: invalid width`)
+    }
+    if (typeof height !== 'number' || height <= 0) {
+      throw new Error(`Object ${i}: invalid height`)
+    }
+
     return {
       id: crypto.randomUUID(),
       board_id: boardId,
       type: obj.type as ObjectType,
-      properties: (obj.properties as Record<string, unknown>) || {},
+      properties: (props as Record<string, unknown>) ?? {},
       x: obj.x as number,
       y: obj.y as number,
-      width: (obj.width as number) || 150,
-      height: (obj.height as number) || 150,
-      z_index: maxZ + i,
+      width,
+      height,
+      z_index: baseZ + i,
       rotation: (obj.rotation as number) || 0,
       created_by: userId,
       updated_at: now,
