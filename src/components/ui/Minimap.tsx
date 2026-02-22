@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
 
@@ -36,24 +36,27 @@ export function Minimap({ viewportWidth, viewportHeight }: MinimapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [collapsed, setCollapsed] = useState(false)
   const isDraggingRef = useRef(false)
+  const rafIdRef = useRef(0)
 
   const objects = useBoardStore((s) => s.objects)
   const stagePosition = useUiStore((s) => s.stagePosition)
   const stageScale = useUiStore((s) => s.stageScale)
   const setStagePosition = useUiStore((s) => s.setStagePosition)
 
+  // Filter connectors once, reuse in bounds + drawing
+  const renderable = useMemo(
+    () => objects.filter((o) => o.type !== 'connector'),
+    [objects],
+  )
+
   // Compute world bounds encompassing all objects + viewport
   const computeWorldBounds = useCallback(() => {
-    // Current viewport in world coordinates
     const vpLeft = -stagePosition.x / stageScale
     const vpTop = -stagePosition.y / stageScale
     const vpRight = vpLeft + viewportWidth / stageScale
     const vpBottom = vpTop + viewportHeight / stageScale
 
-    const renderable = objects.filter((o) => o.type !== 'connector')
-
     if (renderable.length === 0) {
-      // Default bounds when no objects
       const minX = Math.min(-DEFAULT_HALF, vpLeft)
       const minY = Math.min(-DEFAULT_HALF, vpTop)
       const maxX = Math.max(DEFAULT_HALF, vpRight)
@@ -69,11 +72,10 @@ export function Minimap({ viewportWidth, viewportHeight }: MinimapProps) {
     for (const obj of renderable) {
       minX = Math.min(minX, obj.x)
       minY = Math.min(minY, obj.y)
-      maxX = Math.max(maxX, obj.x + obj.width)
-      maxY = Math.max(maxY, obj.y + obj.height)
+      maxX = Math.max(maxX, obj.x + Math.max(obj.width, 1))
+      maxY = Math.max(maxY, obj.y + Math.max(obj.height, 1))
     }
 
-    // Add padding
     const padX = (maxX - minX) * PADDING_RATIO
     const padY = (maxY - minY) * PADDING_RATIO
     minX -= padX
@@ -82,71 +84,80 @@ export function Minimap({ viewportWidth, viewportHeight }: MinimapProps) {
     maxY += padY
 
     return { minX, minY, maxX, maxY, vpLeft, vpTop, vpRight, vpBottom }
-  }, [objects, stagePosition, stageScale, viewportWidth, viewportHeight])
+  }, [renderable, stagePosition, stageScale, viewportWidth, viewportHeight])
 
-  // Render minimap
+  // Throttled render via requestAnimationFrame
   useEffect(() => {
     if (collapsed) return
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
 
-    const dpr = window.devicePixelRatio || 1
-    canvas.width = MINIMAP_W * dpr
-    canvas.height = MINIMAP_H * dpr
-    ctx.scale(dpr, dpr)
+    rafIdRef.current = requestAnimationFrame(() => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
 
-    // Background
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
-    ctx.fillRect(0, 0, MINIMAP_W, MINIMAP_H)
+      const dpr = window.devicePixelRatio || 1
+      canvas.width = MINIMAP_W * dpr
+      canvas.height = MINIMAP_H * dpr
+      ctx.scale(dpr, dpr)
 
-    const bounds = computeWorldBounds()
-    const worldW = bounds.maxX - bounds.minX
-    const worldH = bounds.maxY - bounds.minY
+      // Background
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
+      ctx.fillRect(0, 0, MINIMAP_W, MINIMAP_H)
 
-    // Scale to fit minimap, maintaining aspect ratio
-    const scaleX = MINIMAP_W / worldW
-    const scaleY = MINIMAP_H / worldH
-    const s = Math.min(scaleX, scaleY)
+      const bounds = computeWorldBounds()
+      const worldW = bounds.maxX - bounds.minX
+      const worldH = bounds.maxY - bounds.minY
 
-    // Center offset
-    const offsetX = (MINIMAP_W - worldW * s) / 2
-    const offsetY = (MINIMAP_H - worldH * s) / 2
+      const scaleX = MINIMAP_W / worldW
+      const scaleY = MINIMAP_H / worldH
+      const s = Math.min(scaleX, scaleY)
 
-    const toMiniX = (wx: number) => (wx - bounds.minX) * s + offsetX
-    const toMiniY = (wy: number) => (wy - bounds.minY) * s + offsetY
+      const offsetX = (MINIMAP_W - worldW * s) / 2
+      const offsetY = (MINIMAP_H - worldH * s) / 2
 
-    // Draw objects (skip connectors)
-    const renderable = objects.filter((o) => o.type !== 'connector')
-    for (const obj of renderable) {
-      const mx = toMiniX(obj.x)
-      const my = toMiniY(obj.y)
-      const mw = Math.max(2, obj.width * s)
-      const mh = Math.max(2, obj.height * s)
+      const toMiniX = (wx: number) => (wx - bounds.minX) * s + offsetX
+      const toMiniY = (wy: number) => (wy - bounds.minY) * s + offsetY
 
-      ctx.fillStyle = getObjectColor(obj)
-      if (obj.type === 'circle') {
-        ctx.beginPath()
-        ctx.ellipse(mx + mw / 2, my + mh / 2, mw / 2, mh / 2, 0, 0, Math.PI * 2)
-        ctx.fill()
-      } else {
-        ctx.fillRect(mx, my, mw, mh)
+      // Draw objects
+      for (const obj of renderable) {
+        const mx = toMiniX(obj.x)
+        const my = toMiniY(obj.y)
+        const mw = Math.max(2, obj.width * s)
+        const mh = Math.max(2, obj.height * s)
+
+        ctx.fillStyle = getObjectColor(obj)
+        if (obj.type === 'circle') {
+          ctx.beginPath()
+          ctx.ellipse(mx + mw / 2, my + mh / 2, mw / 2, mh / 2, 0, 0, Math.PI * 2)
+          ctx.fill()
+        } else {
+          ctx.fillRect(mx, my, mw, mh)
+        }
       }
-    }
 
-    // Draw viewport rectangle
-    const vx = toMiniX(bounds.vpLeft)
-    const vy = toMiniY(bounds.vpTop)
-    const vw = Math.max(MIN_VIEWPORT_SIZE, (bounds.vpRight - bounds.vpLeft) * s)
-    const vh = Math.max(MIN_VIEWPORT_SIZE, (bounds.vpBottom - bounds.vpTop) * s)
+      // Draw viewport rectangle
+      const vx = toMiniX(bounds.vpLeft)
+      const vy = toMiniY(bounds.vpTop)
+      const vw = Math.max(MIN_VIEWPORT_SIZE, (bounds.vpRight - bounds.vpLeft) * s)
+      const vh = Math.max(MIN_VIEWPORT_SIZE, (bounds.vpBottom - bounds.vpTop) * s)
 
-    ctx.fillStyle = 'rgba(59, 130, 246, 0.15)'
-    ctx.fillRect(vx, vy, vw, vh)
-    ctx.strokeStyle = 'rgba(59, 130, 246, 0.8)'
-    ctx.lineWidth = 1.5
-    ctx.strokeRect(vx, vy, vw, vh)
-  }, [collapsed, objects, stagePosition, stageScale, viewportWidth, viewportHeight, computeWorldBounds])
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.15)'
+      ctx.fillRect(vx, vy, vw, vh)
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.8)'
+      ctx.lineWidth = 1.5
+      ctx.strokeRect(vx, vy, vw, vh)
+    })
+
+    return () => cancelAnimationFrame(rafIdRef.current)
+  }, [collapsed, renderable, stagePosition, stageScale, viewportWidth, viewportHeight, computeWorldBounds])
+
+  // Global mouseup to prevent stuck drag when mouse leaves window
+  useEffect(() => {
+    const handleGlobalUp = () => { isDraggingRef.current = false }
+    window.addEventListener('mouseup', handleGlobalUp)
+    return () => window.removeEventListener('mouseup', handleGlobalUp)
+  }, [])
 
   // Convert minimap pixel to world coordinate and pan
   const panToMinimapPoint = useCallback(
@@ -160,11 +171,9 @@ export function Minimap({ viewportWidth, viewportHeight }: MinimapProps) {
       const offsetX = (MINIMAP_W - worldW * s) / 2
       const offsetY = (MINIMAP_H - worldH * s) / 2
 
-      // Convert minimap coord to world coord
       const worldX = (canvasX - offsetX) / s + bounds.minX
       const worldY = (canvasY - offsetY) / s + bounds.minY
 
-      // Center viewport on this world point
       const newX = -(worldX - viewportWidth / stageScale / 2) * stageScale
       const newY = -(worldY - viewportHeight / stageScale / 2) * stageScale
       setStagePosition({ x: newX, y: newY })
@@ -227,7 +236,7 @@ export function Minimap({ viewportWidth, viewportHeight }: MinimapProps) {
         ref={canvasRef}
         width={MINIMAP_W}
         height={MINIMAP_H}
-        style={{ width: MINIMAP_W, height: MINIMAP_H, display: 'block' }}
+        className="block w-[200px] h-[140px]"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
