@@ -11,6 +11,7 @@ import { TextEditor } from './TextEditor'
 import { ConnectorPreview } from './ConnectorPreview'
 import { calculateZoom } from './zoomHelper'
 import { ZoomControls } from '../ui/ZoomControls'
+import { Minimap } from '../ui/Minimap'
 import { insertObject, deleteObject } from '../../lib/boardSync'
 import { useUndoRedo, trackCreate, trackBatchCreate, trackDelete } from '../../hooks/useUndoRedo'
 import type { BoardObject, ObjectType } from '../../types/board'
@@ -599,7 +600,10 @@ export function BoardCanvas({ broadcastCursor }: BoardCanvasProps) {
         </Stage>
       )}
       {dimensions.width > 0 && (
-        <ZoomControls viewportWidth={dimensions.width} viewportHeight={dimensions.height} />
+        <>
+          <ZoomControls viewportWidth={dimensions.width} viewportHeight={dimensions.height} />
+          <Minimap viewportWidth={dimensions.width} viewportHeight={dimensions.height} />
+        </>
       )}
       <TextEditor />
     </div>
