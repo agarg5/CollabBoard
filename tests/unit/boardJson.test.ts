@@ -79,8 +79,17 @@ describe('parseBoardJson', () => {
     expect(() => parse([{ type: 'circle' }])).toThrow('missing x/y')
   })
 
-  it('rejects negative width', () => {
+  it('rejects negative width for shapes', () => {
     expect(() => parse([{ ...validObj, width: -10 }])).toThrow('invalid width')
+    expect(() => parse([{ type: 'rectangle', x: 0, y: 0, width: -10 }])).toThrow('invalid width')
+  })
+
+  it('allows negative width/height for connectors and lines', () => {
+    const connector = { type: 'connector', x: 100, y: 200, width: -94, height: -14 }
+    const line = { type: 'line', x: 50, y: 60, width: -30, height: 2 }
+    const result = parse([connector, line])
+    expect(result[0]).toMatchObject({ width: -94, height: -14 })
+    expect(result[1]).toMatchObject({ width: -30, height: 2 })
   })
 
   it('rejects array properties', () => {

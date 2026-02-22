@@ -78,13 +78,14 @@ export function parseBoardJson(
       throw new Error(`Object ${i}: properties must be an object`)
     }
 
-    // Validate width/height are positive numbers if provided
+    // Validate width/height are numbers if provided
+    const allowNegative = obj.type === 'connector' || obj.type === 'line'
     const width = obj.width != null ? obj.width : 150
     const height = obj.height != null ? obj.height : 150
-    if (typeof width !== 'number' || width <= 0) {
+    if (typeof width !== 'number' || (!allowNegative && width <= 0)) {
       throw new Error(`Object ${i}: invalid width`)
     }
-    if (typeof height !== 'number' || height <= 0) {
+    if (typeof height !== 'number' || (!allowNegative && height <= 0)) {
       throw new Error(`Object ${i}: invalid height`)
     }
 
