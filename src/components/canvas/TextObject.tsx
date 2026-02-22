@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { Group, Rect, Text } from 'react-konva'
 import type Konva from 'konva'
 import type { BoardObject } from '../../types/board'
@@ -23,7 +23,7 @@ export const MIN_WIDTH = 50
 export const MIN_HEIGHT = 32
 export const PADDING = 4
 
-export function TextObject({
+export const TextObject = memo(function TextObject({
   obj,
   isSelected,
   isEditing,
@@ -107,4 +107,4 @@ export function TextObject({
       )}
     </Group>
   )
-}
+})

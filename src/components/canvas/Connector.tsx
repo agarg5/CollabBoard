@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Group, Arrow } from 'react-konva'
 import type Konva from 'konva'
 import type { BoardObject } from '../../types/board'
@@ -14,7 +15,7 @@ interface ConnectorProps {
 export const MIN_WIDTH = 10
 export const MIN_HEIGHT = 10
 
-export function Connector({
+export const Connector = memo(function Connector({
   obj,
   onSelect,
   onDragStart,
@@ -71,4 +72,4 @@ export function Connector({
       />
     </Group>
   )
-}
+})
