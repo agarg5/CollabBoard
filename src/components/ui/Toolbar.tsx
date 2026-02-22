@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { useBoardStore } from '../../store/boardStore'
+import { useBoardListStore } from '../../store/boardListStore'
 import { useUiStore } from '../../store/uiStore'
 import { getValidUserId } from '../../store/authStore'
 import { patchObject, deleteObject, insertObject } from '../../lib/boardSync'
@@ -72,8 +73,9 @@ export function Toolbar() {
   }
 
   function handleExport() {
-    const { objects: objs } = useBoardStore.getState()
-    exportBoardJson(objs, 'board')
+    const { objects: objs, boardId } = useBoardStore.getState()
+    const boardName = useBoardListStore.getState().boards.find((b) => b.id === boardId)?.name
+    exportBoardJson(objs, boardName || 'board')
   }
 
   function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -91,7 +93,13 @@ export function Toolbar() {
         const newObjects = parseBoardJson(reader.result as string, boardId, getValidUserId(), maxZ)
         useBoardStore.getState().setObjects([...existing, ...newObjects])
         trackBatchCreate(newObjects)
-        await Promise.all(newObjects.map((obj) => insertObject(obj)))
+        try {
+          await Promise.all(newObjects.map((obj) => insertObject(obj)))
+        } catch {
+          // Rollback local state on DB failure
+          useBoardStore.getState().setObjects(existing)
+          throw new Error('Failed to save imported objects to database')
+        }
       } catch (err) {
         alert(`Import failed: ${(err as Error).message}`)
       }
