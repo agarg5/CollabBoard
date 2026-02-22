@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Group, Line } from 'react-konva'
 import type Konva from 'konva'
 import type { BoardObject } from '../../types/board'
@@ -14,7 +15,7 @@ interface ShapeLineProps {
 export const MIN_WIDTH = 20
 export const MIN_HEIGHT = 20
 
-export function ShapeLine({
+export const ShapeLine = memo(function ShapeLine({
   obj,
   onSelect,
   onDragStart,
@@ -68,4 +69,4 @@ export function ShapeLine({
       />
     </Group>
   )
-}
+})

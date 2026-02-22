@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { Group, Ellipse } from 'react-konva'
 import type Konva from 'konva'
 import type { BoardObject } from '../../types/board'
@@ -18,7 +18,7 @@ interface ShapeCircleProps {
 export const MIN_WIDTH = 50
 export const MIN_HEIGHT = 50
 
-export function ShapeCircle({
+export const ShapeCircle = memo(function ShapeCircle({
   obj,
   isSelected,
   isEditing,
@@ -84,4 +84,4 @@ export function ShapeCircle({
       />
     </Group>
   )
-}
+})

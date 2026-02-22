@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { Group, Rect, Text } from 'react-konva'
 import type Konva from 'konva'
 import type { BoardObject } from '../../types/board'
@@ -23,7 +23,7 @@ const LINE_HEIGHT = 1.2
 const MIN_WIDTH = 100
 const MIN_HEIGHT = 60
 
-export function StickyNote({
+export const StickyNote = memo(function StickyNote({
   obj,
   isSelected,
   isEditing,
@@ -108,6 +108,6 @@ export function StickyNote({
       )}
     </Group>
   )
-}
+})
 
 export { PADDING, FONT_SIZE, FONT_FAMILY, LINE_HEIGHT, MIN_WIDTH, MIN_HEIGHT }
