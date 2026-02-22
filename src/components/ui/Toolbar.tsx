@@ -1,8 +1,10 @@
+import { useRef } from 'react'
 import { useBoardStore } from '../../store/boardStore'
 import { useUiStore } from '../../store/uiStore'
 import { getValidUserId } from '../../store/authStore'
 import { patchObject, deleteObject, insertObject } from '../../lib/boardSync'
 import { trackDelete, trackBatchCreate, trackBatchUpdate } from '../../hooks/useUndoRedo'
+import { exportBoardJson, parseBoardJson } from '../../lib/boardJson'
 import type { BoardObject } from '../../types/board'
 
 const STICKY_COLORS = [
@@ -61,11 +63,39 @@ export function Toolbar() {
   const updateObject = useBoardStore((s) => s.updateObject)
   const deleteSelectedObjects = useBoardStore((s) => s.deleteSelectedObjects)
   const duplicateSelected = useBoardStore((s) => s.duplicateSelected)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function handleDuplicate() {
     const newObjects = duplicateSelected(getValidUserId())
     newObjects.forEach((obj) => insertObject(obj))
     trackBatchCreate(newObjects)
+  }
+
+  function handleExport() {
+    const { objects: objs } = useBoardStore.getState()
+    exportBoardJson(objs, 'board')
+  }
+
+  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const { boardId } = useBoardStore.getState()
+        if (!boardId) return
+        const newObjects = parseBoardJson(reader.result as string, boardId, getValidUserId())
+        const { objects: existing } = useBoardStore.getState()
+        useBoardStore.getState().setObjects([...existing, ...newObjects])
+        newObjects.forEach((obj) => insertObject(obj))
+        trackBatchCreate(newObjects)
+      } catch (err) {
+        alert(`Import failed: ${(err as Error).message}`)
+      }
+    }
+    reader.readAsText(file)
+    // Reset so the same file can be re-imported
+    e.target.value = ''
   }
 
   const colorInfo = getMultiSelectColorInfo(selectedIds, objects)
@@ -435,6 +465,34 @@ export function Toolbar() {
       )}
 
       <div className="ml-auto flex items-center">
+        <div className="w-px h-6 bg-gray-300 mx-1" role="separator" />
+        <button
+          title="Export board as JSON"
+          aria-label="Export board as JSON"
+          onClick={handleExport}
+          className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-gray-100"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3 10v3h10v-3M8 2v8m-3-3l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <button
+          title="Import board from JSON"
+          aria-label="Import board from JSON"
+          onClick={() => fileInputRef.current?.click()}
+          className="px-2 py-1.5 rounded text-sm cursor-pointer transition-colors hover:bg-gray-100"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3 10v3h10v-3M8 10V2m-3 3l3-3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          className="hidden"
+          onChange={handleImport}
+        />
         <div className="w-px h-6 bg-gray-300 mx-1" role="separator" />
         <button
           title="AI Assistant"
