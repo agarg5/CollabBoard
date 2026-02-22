@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { Group, Rect } from 'react-konva'
 import type Konva from 'konva'
 import type { BoardObject } from '../../types/board'
@@ -18,7 +18,7 @@ interface ShapeRectProps {
 export const MIN_WIDTH = 50
 export const MIN_HEIGHT = 50
 
-export function ShapeRect({
+export const ShapeRect = memo(function ShapeRect({
   obj,
   isSelected,
   isEditing,
@@ -82,4 +82,4 @@ export function ShapeRect({
       />
     </Group>
   )
-}
+})

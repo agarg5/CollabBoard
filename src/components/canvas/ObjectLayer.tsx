@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { Layer, Rect, Transformer } from 'react-konva'
 import type Konva from 'konva'
 import { useBoardStore } from '../../store/boardStore'
@@ -69,7 +69,7 @@ export function ObjectLayer({ selectionRect, stageWidth, stageHeight }: ObjectLa
     transformer.getLayer()?.batchDraw()
   }, [selectedIds, visibleObjects])
 
-  function handleSelect(id: string, e?: Konva.KonvaEventObject<MouseEvent>) {
+  const handleSelect = useCallback((id: string, e?: Konva.KonvaEventObject<MouseEvent>) => {
     if (e?.evt.shiftKey) {
       const current = useBoardStore.getState().selectedIds
       if (current.includes(id)) {
@@ -80,9 +80,9 @@ export function ObjectLayer({ selectionRect, stageWidth, stageHeight }: ObjectLa
     } else {
       setSelectedIds([id])
     }
-  }
+  }, [setSelectedIds])
 
-  function handleDragStart(e: Konva.KonvaEventObject<DragEvent>) {
+  const handleDragStart = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
     const draggedId = e.target.id()
     const { selectedIds: ids, objects: allObjects } = useBoardStore.getState()
 
@@ -113,10 +113,10 @@ export function ObjectLayer({ selectionRect, stageWidth, stageHeight }: ObjectLa
 
     e.target.moveToTop()
     transformerRef.current?.moveToTop()
-  }
+  }, [setSelectedIds])
 
   /** Visually reposition connector Konva nodes during drag (no store/DB writes). */
-  function updateConnectorEndpointsVisual(movedId: string, liveX: number, liveY: number) {
+  const updateConnectorEndpointsVisual = useCallback((movedId: string, liveX: number, liveY: number) => {
     const layer = layerRef.current
     if (!layer) return
     const { objects: allObjects } = useBoardStore.getState()
@@ -164,9 +164,9 @@ export function ObjectLayer({ selectionRect, stageWidth, stageHeight }: ObjectLa
         connNode.height(ey - sy)
       }
     }
-  }
+  }, [])
 
-  function handleDragMove(e: Konva.KonvaEventObject<DragEvent>) {
+  const handleDragMove = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
     const draggedId = e.target.id()
     const startPos = dragStartPositions.current.get(draggedId)
     if (!startPos || dragStartPositions.current.size <= 1) {
@@ -196,9 +196,9 @@ export function ObjectLayer({ selectionRect, stageWidth, stageHeight }: ObjectLa
       const liveY = id === draggedId ? e.target.y() : pos.y + dy
       updateConnectorEndpointsVisual(id, liveX, liveY)
     }
-  }
+  }, [updateConnectorEndpointsVisual])
 
-  function updateConnectorEndpoints(movedId: string) {
+  const updateConnectorEndpoints = useCallback((movedId: string) => {
     const { objects: allObjects } = useBoardStore.getState()
     const movedObj = allObjects.find((o) => o.id === movedId)
     if (!movedObj) return
@@ -239,9 +239,9 @@ export function ObjectLayer({ selectionRect, stageWidth, stageHeight }: ObjectLa
       updateObject(conn.id, patch)
       patchObject(conn.id, patch)
     }
-  }
+  }, [updateObject])
 
-  function handleDragEnd(id: string, x: number, y: number) {
+  const handleDragEnd = useCallback((id: string, x: number, y: number) => {
     const updated_at = new Date().toISOString()
 
     // If multi-drag, persist all selected objects
@@ -283,25 +283,25 @@ export function ObjectLayer({ selectionRect, stageWidth, stageHeight }: ObjectLa
     updateConnectorEndpoints(id)
     dragStartPositions.current.clear()
     dragBeforeSnapshots.current.clear()
-  }
+  }, [updateObject, updateConnectorEndpoints])
 
-  function handleTransformEnd(
+  const handleTransformEnd = useCallback((
     id: string,
     attrs: { x: number; y: number; width: number; height: number; rotation?: number },
-  ) {
+  ) => {
     const updated_at = new Date().toISOString()
-    const before = objects.find((o) => o.id === id)
+    const before = useBoardStore.getState().objects.find((o) => o.id === id)
     updateObject(id, { ...attrs, updated_at })
     patchObject(id, { ...attrs, updated_at })
     if (before) {
       trackUpdate(before, { ...before, ...attrs, updated_at })
     }
     updateConnectorEndpoints(id)
-  }
+  }, [updateObject, updateConnectorEndpoints])
 
-  function handleDoubleClick(id: string) {
+  const handleDoubleClick = useCallback((id: string) => {
     setEditingId(id)
-  }
+  }, [setEditingId])
 
   return (
     <Layer ref={layerRef}>

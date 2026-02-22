@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { Group, Rect, Text } from 'react-konva'
 import type Konva from 'konva'
 import type { BoardObject } from '../../types/board'
@@ -22,7 +22,7 @@ const LABEL_PADDING = 8
 export const MIN_WIDTH = 200
 export const MIN_HEIGHT = 150
 
-export function Frame({
+export const Frame = memo(function Frame({
   obj,
   isSelected,
   isEditing,
@@ -99,6 +99,6 @@ export function Frame({
       )}
     </Group>
   )
-}
+})
 
 export { LABEL_FONT_SIZE, LABEL_PADDING }
