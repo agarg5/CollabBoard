@@ -55,7 +55,7 @@ export default defineConfig({
       workers: 1,
       use: {
         video: 'on',
-        headless: false, // Show browser for better video
+        headless: true, // Headless mode works fine for video recording
       },
     },
   ],

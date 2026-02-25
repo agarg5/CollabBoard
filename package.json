@@ -14,7 +14,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test --project=default",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:demo": "playwright test --project=demo",
+    "test:e2e:demo": "playwright test --project=demo && ./scripts/copy-demo-video.sh",
     "test:perf": "node tests/e2e/run-perf-targets.mjs",
     "test:stress": "k6 run tests/stress/concurrent-users.js",
     "test:stress:ws": "k6 run tests/stress/websocket-load.js",

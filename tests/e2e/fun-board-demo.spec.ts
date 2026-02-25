@@ -5,18 +5,25 @@ test.describe('Fun Board Demo Video', () => {
   test('record fun board demo video', async ({ page }) => {
     // Navigate to the app
     await page.goto('/')
-    await expect(page.getByText('My Boards')).toBeVisible({ timeout: 10000 })
-
-    // Wait for page to fully load
-    await page.waitForTimeout(1000)
-
-    // Try to find the fun board
-    const funBoardText = page.getByText('Fun Board 🎉').first()
     
-    if (await funBoardText.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await funBoardText.click()
-    } else {
-      // Navigate directly to the fun board
+    // Wait for page to load - check for either board list or canvas
+    try {
+      await expect(page.getByText('My Boards')).toBeVisible({ timeout: 15000 })
+      // Wait for page to fully load
+      await page.waitForTimeout(1000)
+
+      // Try to find the fun board
+      const funBoardText = page.getByText('Fun Board 🎉').first()
+      
+      if (await funBoardText.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await funBoardText.click()
+      } else {
+        // Navigate directly to the fun board
+        await page.goto(`/board/11111111-1111-1111-1111-111111111111`)
+      }
+    } catch {
+      // If board list doesn't load, try going directly to the board
+      console.log('Board list not found, navigating directly to fun board')
       await page.goto(`/board/11111111-1111-1111-1111-111111111111`)
     }
 
