@@ -34,7 +34,7 @@ export default defineConfig({
   projects: [
     {
       name: 'default',
-      testIgnore: /perf-/,
+      testIgnore: /perf-|fun-board-demo/,
     },
     {
       name: 'perf',
@@ -45,6 +45,17 @@ export default defineConfig({
       use: {
         video: 'off',
         headless: true,
+      },
+    },
+    {
+      name: 'demo',
+      testMatch: /fun-board-demo\.spec\.ts$/,
+      timeout: 60_000,
+      fullyParallel: false,
+      workers: 1,
+      use: {
+        video: 'on',
+        headless: false, // Show browser for better video
       },
     },
   ],

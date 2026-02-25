@@ -14,12 +14,14 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test --project=default",
     "test:e2e:headed": "playwright test --headed",
+    "test:e2e:demo": "playwright test --project=demo",
     "test:perf": "node tests/e2e/run-perf-targets.mjs",
     "test:stress": "k6 run tests/stress/concurrent-users.js",
     "test:stress:ws": "k6 run tests/stress/websocket-load.js",
     "test:stress:presence": "k6 run tests/stress/presence.js",
     "typecheck": "tsc -b --noEmit",
-    "create-fun-board": "tsx scripts/create-fun-board.ts"
+    "create-fun-board": "tsx scripts/create-fun-board.ts",
+    "record-fun-board-video": "tsx scripts/record-fun-board-video.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",
